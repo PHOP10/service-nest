@@ -36,6 +36,13 @@ export class MaMedicalEquipmentController {
     return await this.maMedicalEquipmentService.create(data);
   }
 
+  @Patch('/Edit/:id')
+  async updateEdit(@Param('id') id: string, @Body() data: any) {
+    console.log(data);
+    this.logger.debug(`patch update with id: ${id}`);
+    return await this.maMedicalEquipmentService.updateEdit(+id, data);
+  }
+
   @Patch(':id')
   async update(
     @Param('id') id: string,

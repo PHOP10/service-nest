@@ -46,13 +46,14 @@ export class AuthController {
     if (!comparePassowrd) {
       throw new UnauthorizedException('password is incorrect');
     }
-    const { userId, firstName, lastName, email } = user;
+    const { userId, firstName, lastName, email, role } = user;
 
     const payload = {
       userId,
       username,
       fullName: `${firstName} ${lastName}`,
       email,
+      role,
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
@@ -93,13 +94,14 @@ export class AuthController {
       throw new UnauthorizedException('password is incorrect');
     }
 
-    const { userId, username, firstName, lastName, email } = findUser;
+    const { userId, username, firstName, lastName, email, role } = findUser;
 
     const payload = {
       userId,
       username,
       fullName: `${firstName} ${lastName}`,
       email,
+      role,
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
@@ -128,13 +130,14 @@ export class AuthController {
     if (!findUser) {
       throw new NotFoundException('not found user');
     }
-    const { userId, firstName, lastName, email } = findUser;
+    const { userId, firstName, lastName, email, role } = findUser;
 
     const payload = {
       userId,
       username,
       fullName: `${firstName} ${lastName}`,
       email,
+      role,
     };
     const passwordHash = await hashPassword(password);
     await this.userService.update(findUser.userId, {
@@ -161,13 +164,14 @@ export class AuthController {
       if (user.refreshToken !== refreshToken) {
         throw new UnauthorizedException('user refreshToken invalid!');
       }
-      const { userId, username, fullName, email, levelId } = payload;
+      const { userId, username, fullName, email, levelId, role } = payload;
       const newPayload = {
         userId,
         username,
         fullName,
         email,
         levelId,
+        role,
       };
       const accessToken = this.jwtService.sign(newPayload, {
         secret: jwtConfig.secret,

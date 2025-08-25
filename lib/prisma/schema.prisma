@@ -19,6 +19,7 @@ model User {
   lastName     String    @map("last_name")
   email        String
   refreshToken String?
+  role         String?   @default("user")
   createdAt    DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
   updatedAt    DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
 }
@@ -32,9 +33,10 @@ model OfficialTravelRequest {
   startDate      DateTime   @map("start_date") @db.Timestamptz(6)
   endDate        DateTime   @map("end_date") @db.Timestamptz(6)
   status         String     @map("status")
+  cancelReason   String?    @map("cancel_reason")
   carId          Int?       @map("car_id")
   MasterCar      MasterCar? @relation(fields: [carId], references: [id])
-  createdById    Int?       @map("created_by_id")
+  createdById    String?    @map("created_by_id")
   approvedById   String?    @map("approved_by_id")
   approvedByName String?    @map("approved_by_name")
   approvedDate   DateTime?  @map("approved_date")
@@ -53,6 +55,7 @@ model MaCar {
   passengers    Int      @map("passengers")
   budget        Float?   @map("budget")
   status        String   @default("available") @map("status")
+  cancelReason  String?  @map("cancel_reason")
 
   carId     Int       @map("car_id")
   masterCar MasterCar @relation(fields: [carId], references: [id])
@@ -85,6 +88,7 @@ model DataLeave {
   approvedByName String?     @map("approved_by_name")
   approvedDate   DateTime?   @map("approved_date") @db.Timestamptz(6)
   details        String?     @map("details")
+  cancelReason   String?     @map("cancel_reason")
   typeId         Int         @map("type_id")
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -149,6 +153,7 @@ model Drug {
   price         Float    @map("price")
   quantity      Int      @map("quantity")
   note          String?  @map("note")
+  cancelReason  String?  @map("cancel_reason")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -170,7 +175,7 @@ model MaDrugItem {
   id       Int @id @default(autoincrement())
   maDrugId Int
   drugId   Int
-  quantity Int // จำนวนที่เบิก
+  quantity Int
 
   maDrug MaDrug @relation(fields: [maDrugId], references: [id])
   drug   Drug   @relation(fields: [drugId], references: [id])
@@ -208,16 +213,16 @@ model SupportingResource {
 }
 
 model MedicalEquipment {
-  id           Int       @id @default(autoincrement()) @map("id")
-  code         String    @unique @map("code")
-  name         String    @map("name")
-  quantity     Int       @map("quantity")
-  acquiredDate DateTime? @map("acquired_date") @db.Timestamptz(6)
-  description  String?   @map("description")
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            Int       @id @default(autoincrement()) @map("id")
+  equipmentName String    @map("equipment_name")
+  quantity      Int       @map("quantity")
+  acquiredDate  DateTime? @map("acquired_date") @db.Timestamptz(6)
+  createdById   String?   @map("created_by_id")
+  createdBy     String?   @map("created_by")
+  description   String?   @map("description")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // ความสัมพันธ์
   items MaMedicalEquipmentItem[]
 }
 
@@ -227,27 +232,23 @@ model MaMedicalEquipment {
   receivedDate DateTime? @map("received_date") @db.Timestamptz(6)
   status       String    @default("Pending") @map("status")
   note         String?   @map("note")
-  createdById  Int?      @map("created_by_id")
+  cancelReason String?   @map("cancel_reason")
+  nameReason   String?   @map("name_reason")
+  createdById  String?   @map("created_by_id")
   createdBy    String?   @map("created_by")
   createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  // ความสัมพันธ์
   items MaMedicalEquipmentItem[]
 }
 
-/// ตารางกลาง: เก็บรายละเอียดว่า รายการส่งนี้มีอุปกรณ์อะไรบ้าง และส่งไปกี่ชิ้น
 model MaMedicalEquipmentItem {
-  id       Int @id @default(autoincrement())
-  quantity Int @map("quantity")
-
-  // FK
+  id                   Int                @id @default(autoincrement())
+  quantity             Int                @map("quantity")
   maMedicalEquipmentId Int
   medicalEquipmentId   Int
-
-  // ความสัมพันธ์
-  maMedicalEquipment MaMedicalEquipment @relation(fields: [maMedicalEquipmentId], references: [id])
-  medicalEquipment   MedicalEquipment   @relation(fields: [medicalEquipmentId], references: [id])
+  maMedicalEquipment   MaMedicalEquipment @relation(fields: [maMedicalEquipmentId], references: [id], onDelete: Cascade)
+  medicalEquipment     MedicalEquipment   @relation(fields: [medicalEquipmentId], references: [id])
 }
 
 model InfectiousWaste {

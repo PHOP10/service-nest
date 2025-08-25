@@ -11,6 +11,17 @@ export class MedicalEquipmentService {
     return await this.medicalEquipmentRepo.findAll();
   }
 
+  async findAllMedicalEquipment() {
+    return await this.medicalEquipmentRepo.findMany({
+      include: {
+        items: {
+          include: {
+            maMedicalEquipment: true,
+          },
+        },
+      },
+    });
+  }
   async findOne(id: number) {
     return await this.medicalEquipmentRepo.findOne(id);
   }

@@ -33,8 +33,18 @@ export class MaMedicalEquipmentRepo {
     return await this.prisma.maMedicalEquipment.update(data);
   }
 
+  // async create(data: Prisma.MaMedicalEquipmentCreateInput) {
+  //   return await this.prisma.maMedicalEquipment.create({ data });
+  // }
   async create(data: Prisma.MaMedicalEquipmentCreateInput) {
-    return await this.prisma.maMedicalEquipment.create({ data });
+    return await this.prisma.maMedicalEquipment.create({
+      data,
+      include: {
+        items: {
+          include: { medicalEquipment: true },
+        },
+      },
+    });
   }
 
   async delete(id: number) {

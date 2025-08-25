@@ -8,8 +8,15 @@ export class DataLeaveRepo {
   private logger = new Logger('DataLeaveRepo');
 
   async findAll() {
-    return await this.prisma.dataLeave.findMany();
+    return await this.prisma.dataLeave.findMany({});
   }
+
+  //   async findAll() {
+  //   return await this.prisma.dataLeave.findMany({
+  //     include: {
+  //       masterLeave: true,
+  //   });
+  // }
 
   async findOne(id: number) {
     return await this.prisma.dataLeave.findUnique({
