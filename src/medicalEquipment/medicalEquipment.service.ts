@@ -7,11 +7,11 @@ export class MedicalEquipmentService {
   constructor(private readonly medicalEquipmentRepo: MedicalEquipmentRepo) {}
   private logger = new Logger('MedicalEquipmentService');
 
-  async findAll() {
-    return await this.medicalEquipmentRepo.findAll();
-  }
+  // async findAll() {
+  //   return await this.medicalEquipmentRepo.findAll();
+  // }
 
-  async findAllMedicalEquipment() {
+  async findAll() {
     return await this.medicalEquipmentRepo.findMany({
       include: {
         items: {
@@ -22,6 +22,7 @@ export class MedicalEquipmentService {
       },
     });
   }
+
   async findOne(id: number) {
     return await this.medicalEquipmentRepo.findOne(id);
   }

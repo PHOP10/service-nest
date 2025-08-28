@@ -204,10 +204,12 @@ model SupportingResource {
   id              Int      @id @default(autoincrement()) @map("id")
   code            String   @unique @map("code")
   name            String   @map("name")
-  status          String   @map("status")
+  status          String?  @map("status")
   acquiredDate    DateTime @map("acquired_date") @db.Timestamptz(6)
-  acquisitionType String   @map("acquisition_type")
+  acquisitionType String?  @map("acquisition_type")
   description     String?  @map("description")
+  createdById     String?  @map("created_by_id")
+  createdBy       String?  @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
@@ -217,9 +219,9 @@ model MedicalEquipment {
   equipmentName String    @map("equipment_name")
   quantity      Int       @map("quantity")
   acquiredDate  DateTime? @map("acquired_date") @db.Timestamptz(6)
+  description   String?   @map("description")
   createdById   String?   @map("created_by_id")
   createdBy     String?   @map("created_by")
-  description   String?   @map("description")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -227,19 +229,19 @@ model MedicalEquipment {
 }
 
 model MaMedicalEquipment {
-  id           Int       @id @default(autoincrement()) @map("id")
-  sentDate     DateTime  @map("sent_date") @db.Timestamptz(6)
-  receivedDate DateTime? @map("received_date") @db.Timestamptz(6)
-  status       String    @default("Pending") @map("status")
-  note         String?   @map("note")
-  cancelReason String?   @map("cancel_reason")
-  nameReason   String?   @map("name_reason")
-  createdById  String?   @map("created_by_id")
-  createdBy    String?   @map("created_by")
-  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  items MaMedicalEquipmentItem[]
+  id           Int                      @id @default(autoincrement()) @map("id")
+  sentDate     DateTime                 @map("sent_date") @db.Timestamptz(6)
+  receivedDate DateTime?                @map("received_date") @db.Timestamptz(6)
+  status       String                   @default("Pending") @map("status")
+  note         String?                  @map("note")
+  cancelReason String?                  @map("cancel_reason")
+  nameReason   String?                  @map("name_reason")
+  createdById  String?                  @map("created_by_id")
+  createdBy    String?                  @map("created_by")
+  approveById  String?                  @map("approve_by_id")
+  approveBy    String?                  @map("approve_by")
+  updatedAt    DateTime?                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items        MaMedicalEquipmentItem[]
 }
 
 model MaMedicalEquipmentItem {
