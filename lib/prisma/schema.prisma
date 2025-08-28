@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// prisma/schema.prisma
+
+model User {
+  id           Int       @id @default(autoincrement())
+  userId       String    @unique @default(uuid()) @map("user_id") @db.VarChar(50)
+  username     String    @unique
+  nickName     String    @map("nick_name")
+  password     String
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  email        String
+  refreshToken String?
+  createdAt    DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
+  updatedAt    DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
+}
+
+model OfficialTravelRequest {
+  id             Int        @id @default(autoincrement()) @map("id")
+  documentNo     String     @unique @map("document_no")
+  title          String     @map("title")
+  missionDetail  String     @map("mission_detail")
+  location       String     @map("location")
+  startDate      DateTime   @map("start_date") @db.Timestamptz(6)
+  endDate        DateTime   @map("end_date") @db.Timestamptz(6)
+  status         String     @map("status")
+  carId          Int?       @map("car_id")
+  MasterCar      MasterCar? @relation(fields: [carId], references: [id])
+  createdById    Int?       @map("created_by_id")
+  approvedById   String?    @map("approved_by_id")
+  approvedByName String?    @map("approved_by_name")
+  approvedDate   DateTime?  @map("approved_date")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?  @map("deleted_at")
+}
+
+model MaCar {
+  id            Int      @id @default(autoincrement()) @map("id")
+  requesterName String   @map("requester_name")
+  purpose       String   @map("purpose")
+  departureDate DateTime @map("departure_date") @db.Timestamptz(6)
+  returnDate    DateTime @map("return_date") @db.Timestamptz(6)
+  destination   String   @map("destination")
+  passengers    Int      @map("passengers")
+  budget        Float?   @map("budget")
+  status        String   @default("available") @map("status")
+
+  carId     Int       @map("car_id")
+  masterCar MasterCar @relation(fields: [carId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
+
+model MasterCar {
+  id           Int     @id @default(autoincrement()) @map("id")
+  carName      String  @map("car_name")
+  licensePlate String  @unique @map("license_plate")
+  brand        String  @map("brand")
+  model        String  @map("model")
+  year         Int     @map("year")
+  status       String  @default("available") @map("status")
+  details      String? @map("details")
+
+  maCars                MaCar[]
+  OfficialTravelRequest OfficialTravelRequest[]
+}
+
+model DataLeave {
+  id             Int         @id @default(autoincrement()) @map("id")
+  reason         String      @map("reason")
+  dateStart      DateTime    @map("date_start") @db.Timestamptz(6)
+  dateEnd        DateTime    @map("date_end") @db.Timestamptz(6)
+  status         String      @default("pending") @map("status")
+  approvedById   String?     @map("approved_by_id")
+  approvedByName String?     @map("approved_by_name")
+  approvedDate   DateTime?   @map("approved_date") @db.Timestamptz(6)
+  details        String?     @map("details")
+  typeId         Int         @map("type_id")
+  masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
+
+model MasterLeave {
+  id          Int         @id @default(autoincrement()) @map("id")
+  leaveType   String      @unique @map("leave_type")
+  description String?     @map("description")
+  dataLeaves  DataLeave[]
+}
+
+model VisitHome {
+  id              Int            @id @default(autoincrement()) @map("id")
+  firstName       String         @map("first_name")
+  lastName        String         @map("last_name")
+  age             Int            @map("age")
+  address         String         @map("address")
+  visitDate       DateTime       @map("visit_date") @db.Timestamptz(6)
+  symptoms        String?        @map("symptoms")
+  medication      String?        @map("medication")
+  nextAppointment DateTime?      @map("next_appointment") @db.Timestamptz(6)
+  notes           String?        @map("notes")
+  patientTypeId   Int?           @map("patient_type_id")
+  patientType     MasterPatient? @relation(fields: [patientTypeId], references: [id])
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
+
+model MasterPatient {
+  id          Int         @id @default(autoincrement()) @map("id")
+  typeName    String      @unique @map("type_name")
+  description String?     @map("description")
+  VisitHome   VisitHome[]
+}
+
+model MaDrug {
+  id            Int      @id @default(autoincrement()) @map("id")
+  requestNumber String   @unique @map("request_number")
+  requestUnit   String   @map("request_unit")
+  roundNumber   Int      @map("round_number")
+  requesterName String   @map("requester_name")
+  dispenserName String   @map("dispenser_name")
+  requestDate   DateTime @map("request_date") @db.Timestamptz(6)
+  note          String?  @map("note")
+  status        String   @map("status")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  maDrugItems MaDrugItem[] // หนึ่งรายการเบิก มีหลายยา
+  Drug        Drug?        @relation(fields: [drugId], references: [id])
+  drugId      Int?
+}
+
+model Drug {
+  id            Int      @id @default(autoincrement()) @map("id")
+  workingCode   String   @unique @map("working_code")
+  name          String   @map("name")
+  drugTypeId    Int      @map("drug_type_id") // FK ไป MasterDrug
+  packagingSize String   @map("packaging_size")
+  price         Float    @map("price")
+  quantity      Int      @map("quantity")
+  note          String?  @map("note")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  drugType   MasterDrug   @relation(fields: [drugTypeId], references: [drugTypeId])
+  maDrugs    MaDrug[] // หนึ่งยาสามารถถูกเบิกหลายรายการ
+  MaDrugItem MaDrugItem[]
+}
+
+model MasterDrug {
+  id          Int     @id @default(autoincrement()) @map("id")
+  drugTypeId  Int     @unique @map("drug_type_id")
+  drugType    String  @map("drug_type")
+  description String? @map("description")
+
+  drugs Drug[] // หนึ่งประเภทยา มีหลายยา
+}
+
+model MaDrugItem {
+  id       Int @id @default(autoincrement())
+  maDrugId Int
+  drugId   Int
+  quantity Int // จำนวนที่เบิก
+
+  maDrug MaDrug @relation(fields: [maDrugId], references: [id])
+  drug   Drug   @relation(fields: [drugId], references: [id])
+
+  @@unique([maDrugId, drugId]) // ป้องกันเบิกซ้ำ
+}
+
+model DurableArticle {
+  id                      Int       @id @default(autoincrement()) @map("id")
+  code                    String    @unique @map("code")
+  acquiredDate            DateTime  @map("acquired_date") @db.Timestamptz(6)
+  description             String    @map("description")
+  unitPrice               Float     @map("unit_price")
+  acquisitionType         String    @map("acquisition_type")
+  usageLifespanYears      Int       @map("usage_lifespan_years")
+  monthlyDepreciation     Float     @map("monthly_depreciation")
+  yearlyDepreciation      Float?    @map("yearly_depreciation")
+  accumulatedDepreciation Float?    @map("accumulated_depreciation")
+  netValue                Float?    @map("net_value")
+  note                    String?   @map("note")
+  createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
+
+model SupportingResource {
+  id              Int      @id @default(autoincrement()) @map("id")
+  code            String   @unique @map("code")
+  name            String   @map("name")
+  status          String   @map("status")
+  acquiredDate    DateTime @map("acquired_date") @db.Timestamptz(6)
+  acquisitionType String   @map("acquisition_type")
+  description     String?  @map("description")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
+
+model MedicalEquipment {
+  id           Int       @id @default(autoincrement()) @map("id")
+  code         String    @unique @map("code")
+  name         String    @map("name")
+  quantity     Int       @map("quantity")
+  acquiredDate DateTime? @map("acquired_date") @db.Timestamptz(6)
+  description  String?   @map("description")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // ความสัมพันธ์
+  items MaMedicalEquipmentItem[]
+}
+
+model MaMedicalEquipment {
+  id           Int       @id @default(autoincrement()) @map("id")
+  sentDate     DateTime  @map("sent_date") @db.Timestamptz(6)
+  receivedDate DateTime? @map("received_date") @db.Timestamptz(6)
+  status       String    @default("Pending") @map("status")
+  note         String?   @map("note")
+  createdById  Int?      @map("created_by_id")
+  createdBy    String?   @map("created_by")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // ความสัมพันธ์
+  items MaMedicalEquipmentItem[]
+}
+
+/// ตารางกลาง: เก็บรายละเอียดว่า รายการส่งนี้มีอุปกรณ์อะไรบ้าง และส่งไปกี่ชิ้น
+model MaMedicalEquipmentItem {
+  id       Int @id @default(autoincrement())
+  quantity Int @map("quantity")
+
+  // FK
+  maMedicalEquipmentId Int
+  medicalEquipmentId   Int
+
+  // ความสัมพันธ์
+  maMedicalEquipment MaMedicalEquipment @relation(fields: [maMedicalEquipmentId], references: [id])
+  medicalEquipment   MedicalEquipment   @relation(fields: [medicalEquipmentId], references: [id])
+}
+
+model InfectiousWaste {
+  id            Int       @id @default(autoincrement()) @map("id")
+  wasteType     String    @map("waste_type")
+  wasteWeight   Float     @default(0.0) @map("waste_weight")
+  discardedDate DateTime  @map("discarded_date") @db.Timestamptz(6)
+  wasteDate     DateTime? @map("waste_date") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+}
