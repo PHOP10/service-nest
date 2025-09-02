@@ -89,8 +89,11 @@ model DataLeave {
   approvedDate   DateTime?   @map("approved_date") @db.Timestamptz(6)
   details        String?     @map("details")
   cancelReason   String?     @map("cancel_reason")
+  cancelName     String?     @map("cancel_name")
   typeId         Int         @map("type_id")
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
+  cancelAt       DateTime?   @map("cancel_at") @db.Timestamptz(6)
+  approvedAt     DateTime?   @map("approved_at") @db.Timestamptz(6)
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
@@ -240,6 +243,10 @@ model MaMedicalEquipment {
   createdBy    String?                  @map("created_by")
   approveById  String?                  @map("approve_by_id")
   approveBy    String?                  @map("approve_by")
+  returnName   String?                  @map("return_name")
+  approveAt    DateTime?                @map("approve_at") @db.Timestamptz(6)
+  createdAt    DateTime?                @map("created_at") @db.Timestamptz(6)
+  returndAt    DateTime?                @map("return_at") @db.Timestamptz(6)
   updatedAt    DateTime?                @updatedAt @map("updated_at") @db.Timestamptz(6)
   items        MaMedicalEquipmentItem[]
 }

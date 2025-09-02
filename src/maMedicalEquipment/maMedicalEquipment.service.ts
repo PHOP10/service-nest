@@ -21,6 +21,9 @@ export class MaMedicalEquipmentService {
           },
         },
       },
+      orderBy: {
+        updatedAt: 'desc',
+      },
     });
   }
 
