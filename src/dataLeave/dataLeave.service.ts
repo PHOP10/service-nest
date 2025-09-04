@@ -25,6 +25,12 @@ export class DataLeaveService {
     return await this.dataLeaveRepo.findOne(id);
   }
 
+  async findByUserId(createdById: string) {
+    return await this.dataLeaveRepo.findMany({
+      where: { createdById },
+    });
+  }
+
   async create(data: Prisma.DataLeaveCreateInput) {
     return await this.dataLeaveRepo.create(data);
   }
