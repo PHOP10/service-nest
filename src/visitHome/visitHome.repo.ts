@@ -8,9 +8,12 @@ export class VisitHomeRepo {
   private logger = new Logger('VisitHomeRepo');
 
   async findAll() {
-    return await this.prisma.visitHome.findMany();
+    return await this.prisma.visitHome.findMany({
+      include: {
+        patientType: true, // ดึง relation MasterPatient มาด้วย
+      },
+    });
   }
-
   async findOne(id: number) {
     return await this.prisma.visitHome.findUnique({
       where: { id },

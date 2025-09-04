@@ -7,12 +7,28 @@ export class DataLeaveService {
   constructor(private readonly dataLeaveRepo: DataLeaveRepo) {}
   private logger = new Logger('DataLeaveService');
 
+  // async findAll() {
+  //   return await this.dataLeaveRepo.findAll();
+  // }
   async findAll() {
-    return await this.dataLeaveRepo.findAll();
+    return this.dataLeaveRepo.findMany({
+      include: {
+        masterLeave: true, // ✅ ดึงข้อมูล MasterLeave มาด้วย
+      },
+      orderBy: {
+        createdAt: 'desc', // (ถ้าต้องการเรียงใหม่สุดก่อน)
+      },
+    });
   }
 
   async findOne(id: number) {
     return await this.dataLeaveRepo.findOne(id);
+  }
+
+  async findByUserId(createdById: string) {
+    return await this.dataLeaveRepo.findMany({
+      where: { createdById },
+    });
   }
 
   async create(data: Prisma.DataLeaveCreateInput) {

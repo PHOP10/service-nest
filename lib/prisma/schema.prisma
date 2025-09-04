@@ -18,6 +18,7 @@ model User {
   firstName    String    @map("first_name")
   lastName     String    @map("last_name")
   email        String
+  phoneNumber  Int?      @map("phone_number")
   refreshToken String?
   role         String?   @default("user")
   createdAt    DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
@@ -57,11 +58,11 @@ model MaCar {
   status        String   @default("available") @map("status")
   cancelReason  String?  @map("cancel_reason")
 
-  carId     Int       @map("car_id")
-  masterCar MasterCar @relation(fields: [carId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  carId       Int       @map("car_id")
+  masterCar   MasterCar @relation(fields: [carId], references: [id])
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
 model MasterCar {
@@ -89,8 +90,13 @@ model DataLeave {
   approvedDate   DateTime?   @map("approved_date") @db.Timestamptz(6)
   details        String?     @map("details")
   cancelReason   String?     @map("cancel_reason")
+  cancelName     String?     @map("cancel_name")
   typeId         Int         @map("type_id")
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
+  cancelAt       DateTime?   @map("cancel_at") @db.Timestamptz(6)
+  approvedAt     DateTime?   @map("approved_at") @db.Timestamptz(6)
+  createdById    String?     @map("created_by_id")
+  createdName    String?     @map("created_name")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
@@ -240,6 +246,10 @@ model MaMedicalEquipment {
   createdBy    String?                  @map("created_by")
   approveById  String?                  @map("approve_by_id")
   approveBy    String?                  @map("approve_by")
+  returnName   String?                  @map("return_name")
+  approveAt    DateTime?                @map("approve_at") @db.Timestamptz(6)
+  createdAt    DateTime?                @map("created_at") @db.Timestamptz(6)
+  returndAt    DateTime?                @map("return_at") @db.Timestamptz(6)
   updatedAt    DateTime?                @updatedAt @map("updated_at") @db.Timestamptz(6)
   items        MaMedicalEquipmentItem[]
 }

@@ -28,6 +28,12 @@ export class DataLeaveController {
     return await this.dataLeaveService.findOne(+id);
   }
 
+  @Get('user/:userId')
+  async findByUserId(@Param('userId') userId: string) {
+    this.logger.debug(`findByUserId with userId: ${userId}`);
+    return await this.dataLeaveService.findByUserId(userId);
+  }
+
   @Post()
   async create(@Body() data: Prisma.DataLeaveCreateInput) {
     this.logger.debug('create');
