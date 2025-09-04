@@ -216,7 +216,7 @@ model SupportingResource {
 
 model MedicalEquipment {
   id            Int       @id @default(autoincrement()) @map("id")
-  equipmentName String    @map("equipment_name")
+  equipmentName String?   @map("equipment_name")
   quantity      Int       @map("quantity")
   acquiredDate  DateTime? @map("acquired_date") @db.Timestamptz(6)
   description   String?   @map("description")
