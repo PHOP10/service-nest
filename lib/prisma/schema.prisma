@@ -18,7 +18,9 @@ model User {
   firstName    String    @map("first_name")
   lastName     String    @map("last_name")
   email        String
-  phoneNumber  Int?      @map("phone_number")
+  phoneNumber  String?   @map("phone_number")
+  employeeId   String?   @map("employee_code") @db.VarChar(4)
+  position     String?   @map("position")
   refreshToken String?
   role         String?   @default("user")
   createdAt    DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
@@ -105,6 +107,7 @@ model MasterLeave {
   id          Int         @id @default(autoincrement()) @map("id")
   leaveType   String      @unique @map("leave_type")
   description String?     @map("description")
+  leaveQuota  Int?        @map("leave_quota")
   dataLeaves  DataLeave[]
 }
 
