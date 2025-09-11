@@ -49,34 +49,37 @@ model OfficialTravelRequest {
 }
 
 model MaCar {
-  id            Int      @id @default(autoincrement()) @map("id")
-  requesterName String   @map("requester_name")
-  purpose       String   @map("purpose")
-  departureDate DateTime @map("departure_date") @db.Timestamptz(6)
-  returnDate    DateTime @map("return_date") @db.Timestamptz(6)
-  destination   String   @map("destination")
-  passengers    Int      @map("passengers")
-  budget        Float?   @map("budget")
-  status        String   @default("available") @map("status")
-  cancelReason  String?  @map("cancel_reason")
-
-  carId       Int       @map("car_id")
-  masterCar   MasterCar @relation(fields: [carId], references: [id])
-  createdById String?   @map("created_by_id")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id             Int       @id @default(autoincrement()) @map("id")
+  requesterName  String    @map("requester_name")
+  purpose        String    @map("purpose")
+  dateStart      DateTime? @map("date_start") @db.Timestamptz(6)
+  dateEnd        DateTime? @map("date_end") @db.Timestamptz(6)
+  destination    String    @map("destination")
+  passengers     Int       @map("passengers")
+  passengerNames String[]  @map("passenger_names")
+  budget         Float?    @map("budget")
+  status         String    @default("available") @map("status")
+  cancelName     String?   @map("cancel_name")
+  cancelReason   String?   @map("cancel_reason")
+  cancelAt       DateTime? @map("cancel_at") @db.Timestamptz(6)
+  approvedByName String?   @map("approved_by_name")
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  carId          Int       @map("car_id")
+  masterCar      MasterCar @relation(fields: [carId], references: [id])
+  createdById    String?   @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
 model MasterCar {
-  id           Int     @id @default(autoincrement()) @map("id")
-  carName      String  @map("car_name")
-  licensePlate String  @unique @map("license_plate")
-  brand        String  @map("brand")
-  model        String  @map("model")
-  year         Int     @map("year")
-  status       String  @default("available") @map("status")
-  details      String? @map("details")
-
+  id                    Int                     @id @default(autoincrement()) @map("id")
+  carName               String                  @map("car_name")
+  licensePlate          String                  @unique @map("license_plate")
+  brand                 String                  @map("brand")
+  model                 String                  @map("model")
+  year                  Int                     @map("year")
+  status                String                  @default("available") @map("status")
+  details               String?                 @map("details")
   maCars                MaCar[]
   OfficialTravelRequest OfficialTravelRequest[]
 }
@@ -272,6 +275,7 @@ model InfectiousWaste {
   wasteWeight   Float     @default(0.0) @map("waste_weight")
   discardedDate DateTime  @map("discarded_date") @db.Timestamptz(6)
   wasteDate     DateTime? @map("waste_date") @db.Timestamptz(6)
+  createdName   String?   @map("created_name")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 }

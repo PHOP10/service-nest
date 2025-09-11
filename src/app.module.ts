@@ -36,6 +36,8 @@ import { MedicalEquipmentController } from './medicalEquipment/medicalEquipment.
 import { OfficialTravelRequestController } from './officialTravelRequest/officialTravelRequest.controller';
 import { SupportingResourceController } from './supportingResource/supportingResource.controller';
 import { VisitHomeController } from './visitHome/visitHome.controller';
+import { NotificationsModule } from './notifications/notifications.module';
+import { NotificationsController } from './notifications/notifications.controller';
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
     OfficialTravelRequestModule,
     SupportingResourceModule,
     VisitHomeModule,
+    NotificationsModule,
   ],
   controllers: [
     UserController,
@@ -81,6 +84,7 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
     OfficialTravelRequestController,
     SupportingResourceController,
     VisitHomeController,
+    NotificationsController,
   ],
   providers: [PrismaService],
 })
