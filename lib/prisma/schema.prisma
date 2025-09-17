@@ -279,3 +279,14 @@ model InfectiousWaste {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String // ถ้าใช้ Int เปลี่ยนเป็น Int
+  menuKey   String // เช่น "manageMaCar" หรือ "maCarBook"
+  title     String?
+  message   String
+  isRead    Boolean  @default(false)
+  meta      Json? // เก็บข้อมูลเพิ่มเติม ถ้าต้องการ (e.g. relatedId)
+  createdAt DateTime @default(now())
+}

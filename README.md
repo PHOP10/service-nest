@@ -22,3 +22,8 @@ Change Model
 Push DB
 
 ```db:push```
+
+
+npm i
+``` npm install @nestjs/websockets @nestjs/platform-socket.io socket.io```
+```npm install -D @types/socket.io```
