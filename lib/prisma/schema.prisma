@@ -97,6 +97,10 @@ model DataLeave {
   cancelReason   String?     @map("cancel_reason")
   cancelName     String?     @map("cancel_name")
   typeId         Int         @map("type_id")
+  writeAt        String?     @map("contact_location") // เช่น รพ.สต.ผาผึ้ง
+  contactAddress String?     @map("contact_address") // บ้านเลขที่
+  contactPhone   String?     @map("contact_phone") // โทรศัพท์
+  backupUserId   String?     @map("backup_user_id") // ผู้รับผิดชอบงานระหว่างลา
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
   cancelAt       DateTime?   @map("cancel_at") @db.Timestamptz(6)
   approvedAt     DateTime?   @map("approved_at") @db.Timestamptz(6)
@@ -207,23 +211,31 @@ model DurableArticle {
   yearlyDepreciation      Float?    @map("yearly_depreciation")
   accumulatedDepreciation Float?    @map("accumulated_depreciation")
   netValue                Float?    @map("net_value")
+  attributes              String?   @map("attributes") // ลักษณะ/คุณสมบัติ
+  category                String?   @map("category") // ประเภท
+  documentId              String?   @map("document_id") // เลขอ้างอิงเอกสาร
+  responsibleAgency       String?   @map("responsible_agency") // หน่วยงานรับผิดชอบ
   note                    String?   @map("note")
   createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
 model SupportingResource {
-  id              Int      @id @default(autoincrement()) @map("id")
-  code            String   @unique @map("code")
-  name            String   @map("name")
-  status          String?  @map("status")
-  acquiredDate    DateTime @map("acquired_date") @db.Timestamptz(6)
-  acquisitionType String?  @map("acquisition_type")
-  description     String?  @map("description")
-  createdById     String?  @map("created_by_id")
-  createdBy       String?  @map("created_by")
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                Int      @id @default(autoincrement()) @map("id")
+  code              String   @unique @map("code")
+  name              String   @map("name")
+  status            String?  @map("status")
+  acquiredDate      DateTime @map("acquired_date") @db.Timestamptz(6)
+  acquisitionType   String?  @map("acquisition_type")
+  description       String?  @map("description")
+  attributes        String?  @map("attributes") // ลักษณะ/คุณสมบัติ
+  category          String?  @map("category") // ประเภท
+  documentId        String?  @map("document_id") // เลขอ้างอิงเอกสาร
+  responsibleAgency String?  @map("responsible_agency") // หน่วยงานรับผิดชอบ
+  createdById       String?  @map("created_by_id")
+  createdBy         String?  @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
 model MedicalEquipment {
