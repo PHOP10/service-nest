@@ -28,6 +28,7 @@ export class DataLeaveService {
   async findByUserId(createdById: string) {
     return await this.dataLeaveRepo.findMany({
       where: { createdById },
+      include: { masterLeave: true },
     });
   }
 

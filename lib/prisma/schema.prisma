@@ -154,27 +154,23 @@ model MaDrug {
   status        String   @map("status")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  maDrugItems MaDrugItem[] // หนึ่งรายการเบิก มีหลายยา
-  Drug        Drug?        @relation(fields: [drugId], references: [id])
-  drugId      Int?
+  // ✅ ให้เหลือแค่ความสัมพันธ์นี้
+  maDrugItems MaDrugItem[]
 }
 
 model Drug {
-  id            Int      @id @default(autoincrement()) @map("id")
-  workingCode   String   @unique @map("working_code")
-  name          String   @map("name")
-  drugTypeId    Int      @map("drug_type_id") // FK ไป MasterDrug
-  packagingSize String   @map("packaging_size")
-  price         Float    @map("price")
-  quantity      Int      @map("quantity")
-  note          String?  @map("note")
-  cancelReason  String?  @map("cancel_reason")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  drugType   MasterDrug   @relation(fields: [drugTypeId], references: [drugTypeId])
-  maDrugs    MaDrug[] // หนึ่งยาสามารถถูกเบิกหลายรายการ
+  id            Int        @id @default(autoincrement()) @map("id")
+  workingCode   String     @unique @map("working_code")
+  name          String     @map("name")
+  drugTypeId    Int        @map("drug_type_id") // FK ไป MasterDrug
+  packagingSize String     @map("packaging_size")
+  price         Float      @map("price")
+  quantity      Int        @map("quantity")
+  note          String?    @map("note")
+  cancelReason  String?    @map("cancel_reason")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  drugType      MasterDrug @relation(fields: [drugTypeId], references: [drugTypeId])
   MaDrugItem MaDrugItem[]
 }
 
@@ -183,7 +179,6 @@ model MasterDrug {
   drugTypeId  Int     @unique @map("drug_type_id")
   drugType    String  @map("drug_type")
   description String? @map("description")
-
   drugs Drug[] // หนึ่งประเภทยา มีหลายยา
 }
 
@@ -202,6 +197,7 @@ model MaDrugItem {
 model DurableArticle {
   id                      Int       @id @default(autoincrement()) @map("id")
   code                    String    @unique @map("code")
+  registrationNumber      String?   @map("registration_number") // หมายเลขหรือทะเบียน
   acquiredDate            DateTime  @map("acquired_date") @db.Timestamptz(6)
   description             String    @map("description")
   unitPrice               Float     @map("unit_price")
@@ -211,6 +207,7 @@ model DurableArticle {
   yearlyDepreciation      Float?    @map("yearly_depreciation")
   accumulatedDepreciation Float?    @map("accumulated_depreciation")
   netValue                Float?    @map("net_value")
+  type                    String?   @map("type")
   attributes              String?   @map("attributes") // ลักษณะ/คุณสมบัติ
   category                String?   @map("category") // ประเภท
   documentId              String?   @map("document_id") // เลขอ้างอิงเอกสาร
