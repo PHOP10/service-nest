@@ -19,9 +19,14 @@ export class DataLeaveRepo {
   // }
 
   async findOne(id: number) {
-    return await this.prisma.dataLeave.findUnique({
+    return this.prisma.dataLeave.findUnique({
       where: { id },
+      include: { masterLeave: true },
     });
+  }
+
+  async findUnique(args: Prisma.DataLeaveFindUniqueArgs) {
+    return this.prisma.dataLeave.findUnique(args);
   }
 
   async findFirst(query: Prisma.DataLeaveFindFirstArgs) {

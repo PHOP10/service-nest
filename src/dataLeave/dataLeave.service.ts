@@ -7,9 +7,6 @@ export class DataLeaveService {
   constructor(private readonly dataLeaveRepo: DataLeaveRepo) {}
   private logger = new Logger('DataLeaveService');
 
-  // async findAll() {
-  //   return await this.dataLeaveRepo.findAll();
-  // }
   async findAll() {
     return this.dataLeaveRepo.findMany({
       include: {
@@ -22,7 +19,12 @@ export class DataLeaveService {
   }
 
   async findOne(id: number) {
-    return await this.dataLeaveRepo.findOne(id);
+    return await this.dataLeaveRepo.findUnique({
+      where: { id },
+      include: {
+        masterLeave: true, // ✅ ดึงข้อมูล relation ด้วย
+      },
+    });
   }
 
   async findByUserId(createdById: string) {

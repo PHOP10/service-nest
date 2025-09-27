@@ -8,7 +8,14 @@ export class OfficialTravelRequestRepo {
   private logger = new Logger('OfficialTravelRequestRepo');
 
   async findAll() {
-    return await this.prisma.officialTravelRequest.findMany();
+    return await this.prisma.officialTravelRequest.findMany({
+      include: {
+        MasterCar: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
 
   async findOne(id: number) {
