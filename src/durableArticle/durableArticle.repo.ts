@@ -8,7 +8,11 @@ export class DurableArticleRepo {
   private logger = new Logger('DurableArticleRepo');
 
   async findAll() {
-    return await this.prisma.durableArticle.findMany();
+    return await this.prisma.durableArticle.findMany({
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
 
   async findOne(id: number) {

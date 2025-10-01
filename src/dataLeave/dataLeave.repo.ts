@@ -7,16 +7,17 @@ export class DataLeaveRepo {
   constructor(private readonly prisma: PrismaService) {}
   private logger = new Logger('DataLeaveRepo');
 
-  async findAll() {
-    return await this.prisma.dataLeave.findMany({});
-  }
-
-  //   async findAll() {
-  //   return await this.prisma.dataLeave.findMany({
-  //     include: {
-  //       masterLeave: true,
-  //   });
+  // async findAll() {
+  //   return await this.prisma.dataLeave.findMany({});
   // }
+
+  async findAll() {
+    return await this.prisma.dataLeave.findMany({
+      include: {
+        masterLeave: true,
+      },
+    });
+  }
 
   async findOne(id: number) {
     return this.prisma.dataLeave.findUnique({

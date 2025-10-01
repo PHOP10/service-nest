@@ -8,12 +8,19 @@ export class MaCarRepo {
   private logger = new Logger('MaCarRepo');
 
   async findAll() {
-    return await this.prisma.maCar.findMany();
+    return await this.prisma.maCar.findMany({
+      include: {
+        masterCar: true,
+      },
+    });
   }
 
   async findOne(id: number) {
     return await this.prisma.maCar.findUnique({
       where: { id },
+      include: {
+        masterCar: true,
+      },
     });
   }
 

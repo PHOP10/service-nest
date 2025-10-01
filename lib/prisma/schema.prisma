@@ -36,7 +36,9 @@ model OfficialTravelRequest {
   location       String     @map("location")
   startDate      DateTime   @map("start_date") @db.Timestamptz(6)
   endDate        DateTime   @map("end_date") @db.Timestamptz(6)
+  budget         String?    @map("budget")
   status         String     @map("status")
+  note           String?    @map("note")
   cancelName     String?    @map("cancel_name")
   cancelReason   String?    @map("cancel_reason")
   cancelAt       DateTime?  @map("cancel_at") @db.Timestamptz(6)
@@ -58,15 +60,17 @@ model MaCar {
   id             Int       @id @default(autoincrement()) @map("id")
   recipient      String?   @map("recipient")
   documentNo     String?   @unique @map("document_no")
-  requesterName  String    @map("requester_name")
+  requesterName  String?   @map("requester_name")
   purpose        String    @map("purpose")
   dateStart      DateTime? @map("date_start") @db.Timestamptz(6)
   dateEnd        DateTime? @map("date_end") @db.Timestamptz(6)
   destination    String    @map("destination")
   passengers     Int       @map("passengers")
   passengerNames String[]  @map("passenger_names")
-  budget         Float?    @map("budget")
+  budget         String?   @map("budget")
   status         String    @default("available") @map("status")
+  note           String?   @map("note")
+  driver         String?   @map("driver")
   cancelName     String?   @map("cancel_name")
   cancelReason   String?   @map("cancel_reason")
   cancelAt       DateTime? @map("cancel_at") @db.Timestamptz(6)
@@ -74,6 +78,7 @@ model MaCar {
   approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
   carId          Int       @map("car_id")
   masterCar      MasterCar @relation(fields: [carId], references: [id])
+  createdName    String?   @map("created_name")
   createdById    String?   @map("created_by_id")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -105,10 +110,10 @@ model DataLeave {
   cancelReason   String?     @map("cancel_reason")
   cancelName     String?     @map("cancel_name")
   typeId         Int         @map("type_id")
-  writeAt        String?     @map("contact_location") // เช่น รพ.สต.ผาผึ้ง
-  contactAddress String?     @map("contact_address") // บ้านเลขที่
-  contactPhone   String?     @map("contact_phone") // โทรศัพท์
-  backupUserId   String?     @map("backup_user_id") // ผู้รับผิดชอบงานระหว่างลา
+  writeAt        String?     @map("contact_location")
+  contactAddress String?     @map("contact_address")
+  contactPhone   String?     @map("contact_phone")
+  backupUserId   String?     @map("backup_user_id")
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
   cancelAt       DateTime?   @map("cancel_at") @db.Timestamptz(6)
   approvedAt     DateTime?   @map("approved_at") @db.Timestamptz(6)
@@ -139,6 +144,7 @@ model VisitHome {
   notes           String?        @map("notes")
   patientTypeId   Int?           @map("patient_type_id")
   patientType     MasterPatient? @relation(fields: [patientTypeId], references: [id])
+  createdName     String?        @map("created_name")
   createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
@@ -160,9 +166,9 @@ model MaDrug {
   requestDate   DateTime     @map("request_date") @db.Timestamptz(6)
   note          String?      @map("note")
   status        String       @map("status")
+  createdName   String?      @map("created_name")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  // ✅ ให้เหลือแค่ความสัมพันธ์นี้
   maDrugItems   MaDrugItem[]
 }
 
@@ -205,7 +211,7 @@ model MaDrugItem {
 model DurableArticle {
   id                      Int       @id @default(autoincrement()) @map("id")
   code                    String    @unique @map("code")
-  registrationNumber      String?   @map("registration_number") // หมายเลขหรือทะเบียน
+  registrationNumber      String?   @map("registration_number")
   acquiredDate            DateTime  @map("acquired_date") @db.Timestamptz(6)
   description             String    @map("description")
   unitPrice               Float     @map("unit_price")
@@ -216,17 +222,18 @@ model DurableArticle {
   accumulatedDepreciation Float?    @map("accumulated_depreciation")
   netValue                Float?    @map("net_value")
   type                    String?   @map("type")
-  attributes              String?   @map("attributes") // ลักษณะ/คุณสมบัติ
-  category                String?   @map("category") // ประเภท
-  documentId              String?   @map("document_id") // เลขอ้างอิงเอกสาร
-  responsibleAgency       String?   @map("responsible_agency") // หน่วยงานรับผิดชอบ
+  attributes              String?   @map("attributes")
+  category                String?   @map("category")
+  documentId              String?   @map("document_id")
+  responsibleAgency       String?   @map("responsible_agency")
   note                    String?   @map("note")
+  createdName             String?   @map("created_name")
   createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
 model SupportingResource {
-  id                Int      @id @default(autoincrement()) @map("id")
+  id                Int      @id @default(autoincrement()) @map("id") //ไม่ได้ใช้แล้ว
   code              String   @unique @map("code")
   name              String   @map("name")
   status            String?  @map("status")
@@ -249,6 +256,7 @@ model MedicalEquipment {
   quantity      Int       @map("quantity")
   acquiredDate  DateTime? @map("acquired_date") @db.Timestamptz(6)
   description   String?   @map("description")
+  createdName   String?   @map("created_name")
   createdById   String?   @map("created_by_id")
   createdBy     String?   @map("created_by")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -271,6 +279,7 @@ model MaMedicalEquipment {
   approveBy    String?                  @map("approve_by")
   returnName   String?                  @map("return_name")
   approveAt    DateTime?                @map("approve_at") @db.Timestamptz(6)
+  createdName  String?                  @map("created_name")
   createdAt    DateTime?                @map("created_at") @db.Timestamptz(6)
   returndAt    DateTime?                @map("return_at") @db.Timestamptz(6)
   updatedAt    DateTime?                @updatedAt @map("updated_at") @db.Timestamptz(6)
