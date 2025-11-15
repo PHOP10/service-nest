@@ -113,6 +113,7 @@ model DataLeave {
   writeAt        String?     @map("contact_location")
   contactAddress String?     @map("contact_address")
   contactPhone   String?     @map("contact_phone")
+  fileName       String?     @map("file_name")
   backupUserId   String?     @map("backup_user_id")
   masterLeave    MasterLeave @relation(fields: [typeId], references: [id])
   cancelAt       DateTime?   @map("cancel_at") @db.Timestamptz(6)

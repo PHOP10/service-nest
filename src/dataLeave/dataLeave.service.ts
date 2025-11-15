@@ -22,7 +22,7 @@ export class DataLeaveService {
     return await this.dataLeaveRepo.findUnique({
       where: { id },
       include: {
-        masterLeave: true, // ✅ ดึงข้อมูล relation ด้วย
+        masterLeave: true,
       },
     });
   }
@@ -31,6 +31,9 @@ export class DataLeaveService {
     return await this.dataLeaveRepo.findMany({
       where: { createdById },
       include: { masterLeave: true },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 

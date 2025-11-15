@@ -25,5 +25,6 @@ Push DB
 
 
 npm i
-``` npm install @nestjs/websockets @nestjs/platform-socket.io socket.io```
-```npm install -D @types/socket.io```
+``` npm install @nestjs/websockets @nestjs/platform-socket.io socket.io````
+```npm install -D @types/socket.io````
+```npm install --save-dev @types/multer @types/express```
