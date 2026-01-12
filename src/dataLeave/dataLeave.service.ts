@@ -13,7 +13,7 @@ export class DataLeaveService {
         masterLeave: true, // ✅ ดึงข้อมูล MasterLeave มาด้วย
       },
       orderBy: {
-        createdAt: 'desc', // (ถ้าต้องการเรียงใหม่สุดก่อน)
+        updatedAt: 'desc', // (ถ้าต้องการเรียงใหม่สุดก่อน)
       },
     });
   }
@@ -32,7 +32,7 @@ export class DataLeaveService {
       where: { createdById },
       include: { masterLeave: true },
       orderBy: {
-        createdAt: 'desc',
+        updatedAt: 'desc',
       },
     });
   }

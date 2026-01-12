@@ -10,7 +10,11 @@ export class UserService {
   private logger = new Logger('User service');
 
   async findAll() {
-    return await this.userRepo.findAll();
+    return await this.userRepo.findMany({
+      orderBy: {
+        id: 'asc',
+      },
+    });
   }
 
   async findOne(id: number) {

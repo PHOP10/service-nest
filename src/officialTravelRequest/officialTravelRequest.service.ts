@@ -10,7 +10,14 @@ export class OfficialTravelRequestService {
   private logger = new Logger('OfficialTravelRequestService');
 
   async findAll() {
-    return await this.officialTravelRequestRepo.findAll();
+    return await this.officialTravelRequestRepo.findMany({
+      include: {
+        MasterCar: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
 
   async findOne(id: number) {

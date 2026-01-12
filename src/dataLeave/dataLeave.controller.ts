@@ -17,6 +17,7 @@ import { extname, join } from 'path';
 import { DataLeaveService } from './dataLeave.service';
 import { Prisma } from '@prisma/client';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import { File } from 'multer';
 
 @Controller('dataLeave')
 export class DataLeaveController {
@@ -76,7 +77,7 @@ export class DataLeaveController {
       },
     }),
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File) {
+  uploadFile(@UploadedFile() file: File) {
     if (!file) {
       this.logger.error('No file uploaded');
       return {

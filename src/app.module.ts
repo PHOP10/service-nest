@@ -46,7 +46,7 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
     }),
     JwtModule.register({
       secret: jwtConfig.secret,
-      signOptions: { expiresIn: jwtConfig.expires },
+      signOptions: { expiresIn: jwtConfig.expires as any },
     }),
     UserModule,
     DataLeaveModule,

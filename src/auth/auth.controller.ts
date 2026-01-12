@@ -57,12 +57,12 @@ export class AuthController {
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
-      expiresIn: jwtConfig.expires,
+      expiresIn: jwtConfig.expires as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
-      expiresIn: jwtConfig.refreshExpires,
+      expiresIn: jwtConfig.refreshExpires as any,
     });
     await this.userService.update(user.userId, {
       refreshToken,
@@ -105,12 +105,12 @@ export class AuthController {
     };
     const accessToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
-      expiresIn: jwtConfig.expires,
+      expiresIn: jwtConfig.expires as any,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: jwtConfig.secret,
-      expiresIn: jwtConfig.refreshExpires,
+      expiresIn: jwtConfig.refreshExpires as any,
     });
 
     const hashNewPassword = await hashPassword(newPassword);
@@ -175,11 +175,11 @@ export class AuthController {
       };
       const accessToken = this.jwtService.sign(newPayload, {
         secret: jwtConfig.secret,
-        expiresIn: jwtConfig.expires,
+        expiresIn: jwtConfig.expires as any,
       });
       const refreshTokenNew = this.jwtService.sign(newPayload, {
         secret: jwtConfig.secret,
-        expiresIn: jwtConfig.refreshExpires,
+        expiresIn: jwtConfig.refreshExpires as any,
       });
       await this.userService.update(user.userId, {
         refreshToken: refreshTokenNew,

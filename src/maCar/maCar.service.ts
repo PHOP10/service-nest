@@ -8,9 +8,15 @@ export class MaCarService {
   private logger = new Logger('MaCarService');
 
   async findAll() {
-    return await this.maCarRepo.findAll();
+    return await this.maCarRepo.findMany({
+      include: {
+        masterCar: true,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
-
   async findOne(id: number) {
     return await this.maCarRepo.findOne(id);
   }
