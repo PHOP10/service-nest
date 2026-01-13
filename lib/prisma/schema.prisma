@@ -138,21 +138,43 @@ model MasterLeave {
 }
 
 model VisitHome {
-  id              Int            @id @default(autoincrement()) @map("id")
-  firstName       String         @map("first_name")
-  lastName        String         @map("last_name")
-  age             Int            @map("age")
-  address         String         @map("address")
-  visitDate       DateTime       @map("visit_date") @db.Timestamptz(6)
-  symptoms        String?        @map("symptoms")
-  medication      String?        @map("medication")
-  nextAppointment DateTime?      @map("next_appointment") @db.Timestamptz(6)
-  notes           String?        @map("notes")
-  patientTypeId   Int?           @map("patient_type_id")
-  patientType     MasterPatient? @relation(fields: [patientTypeId], references: [id])
-  createdName     String?        @map("created_name")
-  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id Int @id @default(autoincrement()) @map("id")
+
+  // --- ข้อมูลพื้นฐานผู้ป่วย (จากส่วนบนของฟอร์ม) ---
+  hhcNo            String?        @map("hhc_no") // เลขที่ HHC
+  referralDate     DateTime?      @map("referral_date") // วันที่ส่ง (Referral Date)
+  patientTypeId    Int?           @map("patient_type_id") // ประเภทผู้ป่วย (Relation เดิม)
+  firstName        String?        @map("first_name") // ชื่อผู้ป่วย
+  lastName         String?        @map("last_name") // นามสกุล
+  fullName         String?        @map("full_name") // ชื่อ-นามสกุล (ใช้ field เด
+  age              Int            @map("age") // อายุ
+  hn               String?        @map("hn") // HN (Hospital Number)
+  dob              DateTime?      @map("dob") // วันเดือนปีเกิด
+  cid              String?        @map("cid") // เลข 13 หลัก (Citizen ID)
+  phone            String?        @map("phone") // เบอร์โทร
+  address          String         @map("address") // ที่อยู่จริง
+  allergies        String?        @map("allergies") // แพ้ยา/แพ้อาหาร
+  admissionDate    DateTime?      @map("admission_date") // วันที่เข้ารับการรักษา
+  dischargeDate    DateTime?      @map("discharge_date") // วันที่จำหน่ายออกจาก รพ.
+  temperature      Float?         @map("temperature") // T (อุณหภูมิร่างกาย)
+  pulseRate        Int?           @map("pulse_rate") // PR (อัตราการเต้นหัวใจ BPM)
+  respRate         Int?           @map("resp_rate") // RR (อัตราการหายใจ /min)
+  bloodPressure    String?        @map("blood_pressure") // BP (ความดันโลหิต mmHg)
+  oxygenSat        Float?         @map("oxygen_sat") // O2 sat (%)
+  initialHistory   String?        @map("initial_history") // ประวัติการเจ็บป่วยแรกรับ
+  symptoms         String?        @map("symptoms") // อาการปัจจุบัน ก่อนกลับบ้าน (ใช้ field เดิม)
+  diagnosis        String?        @map("diagnosis") // การวินิจฉัยโรค
+  medication       String?        @map("medication") // ยากลับบ้าน (ใช้ field เดิม, อาจเก็บเป็น Text ยาวๆ หรือ JSON)
+  medicalEquipment String?        @map("medical_equipment") // อุปกรณ์ที่ติดตัวกลับบ้าน
+  careNeeds        String?        @map("care_needs") // ความต้องการในการดูแล (ระบุปัญหาที่พบ)
+  nextAppointment  DateTime?      @map("next_appointment") @db.Timestamptz(6) // การนัดติดตามอาการ (ใช้ field เดิม)
+  visitDate        DateTime       @map("visit_date") @db.Timestamptz(6) // วันที่ไปเยี่ยมจริง (field เดิม)
+  notes            String?        @map("notes") // หมายเหตุเพิ่มเติม (field เดิม)
+  createdById      String?        @map("created_by_id")
+  createdName      String?        @map("created_name") // ผู้บันทึก
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  patientType      MasterPatient? @relation(fields: [patientTypeId], references: [id])
 }
 
 model MasterPatient {
