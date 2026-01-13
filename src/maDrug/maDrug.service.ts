@@ -8,7 +8,16 @@ export class MaDrugService {
   private logger = new Logger('MaDrugService');
 
   async findAll() {
-    return await this.maDrugRepo.findAll();
+    return await this.maDrugRepo.findMany({
+      include: {
+        maDrugItems: {
+          include: {
+            drug: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' }, // เรียงจากใหม่ไปเก่า
+    });
   }
 
   async findOne(id: number) {
