@@ -12,11 +12,15 @@ export class MaDrugService {
       include: {
         maDrugItems: {
           include: {
-            drug: true,
+            drug: {
+              include: {
+                drugType: true,
+              },
+            },
           },
         },
       },
-      orderBy: { createdAt: 'desc' }, // เรียงจากใหม่ไปเก่า
+      orderBy: { createdAt: 'desc' }, // คง code เดิมไว้
     });
   }
 
@@ -37,5 +41,9 @@ export class MaDrugService {
 
   async delete(id: number) {
     return await this.maDrugRepo.delete(id);
+  }
+
+  async receive(id: number) {
+    return await this.maDrugRepo.receive(id);
   }
 }

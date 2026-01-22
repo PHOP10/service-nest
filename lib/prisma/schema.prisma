@@ -11,10 +11,10 @@ model User {
   id           Int       @id @default(autoincrement())
   userId       String    @unique @default(uuid()) @map("user_id") @db.VarChar(50)
   username     String    @unique
-  nickName     String    @map("nick_name")
   password     String
   firstName    String    @map("first_name")
   lastName     String    @map("last_name")
+  nickName     String?   @map("nick_name")
   email        String
   phoneNumber  String?   @map("phone_number")
   employeeId   String?   @map("employee_code") @db.VarChar(4)
@@ -162,7 +162,7 @@ model VisitHome {
   bloodPressure    String?        @map("blood_pressure") // BP (ความดันโลหิต mmHg)
   oxygenSat        Float?         @map("oxygen_sat") // O2 sat (%)
   initialHistory   String?        @map("initial_history") // ประวัติการเจ็บป่วยแรกรับ
-  symptoms         String?        @map("symptoms") // อาการปัจจุบัน ก่อนกลับบ้าน (ใช้ field เดิม)
+  symptoms         String?        @map("symptoms") // อาการปัจจุบัน ก่อนกลับบ้าน (ใช้ field เดิม )
   diagnosis        String?        @map("diagnosis") // การวินิจฉัยโรค
   medication       String?        @map("medication") // ยากลับบ้าน (ใช้ field เดิม, อาจเก็บเป็น Text ยาวๆ หรือ JSON)
   medicalEquipment String?        @map("medical_equipment") // อุปกรณ์ที่ติดตัวกลับบ้าน
@@ -186,14 +186,18 @@ model MasterPatient {
 
 model MaDrug {
   id            Int          @id @default(autoincrement()) @map("id")
-  requestNumber String       @unique @map("request_number")
+  requestNumber String?      @unique @map("request_number")
   requestUnit   String       @map("request_unit")
   roundNumber   Int          @map("round_number")
-  requesterName String       @map("requester_name")
-  dispenserName String       @map("dispenser_name")
+  requesterName String?      @map("requester_name")
+  dispenserName String?      @map("dispenser_name")
   requestDate   DateTime     @map("request_date") @db.Timestamptz(6)
+  quantityUsed  Int?         @map("quantity_used")
+  totalPrice    Float?       @map("total_price")
   note          String?      @map("note")
   status        String       @map("status")
+  cancelReason  String?      @map("cancel_reason")
+  cancelName    String?      @map("cancel_name")
   createdName   String?      @map("created_name")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -230,10 +234,10 @@ model MaDrugItem {
   drugId   Int
   quantity Int
 
-  maDrug MaDrug @relation(fields: [maDrugId], references: [id])
+  maDrug MaDrug @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
   drug   Drug   @relation(fields: [drugId], references: [id])
 
-  @@unique([maDrugId, drugId]) // ป้องกันเบิกซ้ำ
+  @@unique([maDrugId, drugId])
 }
 
 model DurableArticle {

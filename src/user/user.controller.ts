@@ -29,6 +29,19 @@ export class UserController {
     return await this.userService.findOne(+id);
   }
 
+  @Patch('change-password/:userId')
+  async changePassword(@Param('userId') userId: string, @Body() body: any) {
+    this.logger.debug(`Attempting to change password for userId: ${userId}`);
+    console.log(2);
+    console.log('Received body:', body);
+    // เรียกใช้ฟังก์ชัน changePassword ใน Service (ดูโค้ดด้านล่าง)
+    return await this.userService.changePassword(
+      userId,
+      body.oldPassword,
+      body.newPassword,
+    );
+  }
+
   @Post('')
   async create(@Body() data: Prisma.UserCreateInput) {
     this.logger.debug('create');

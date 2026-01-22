@@ -43,6 +43,11 @@ export class MaDrugController {
     return await this.maDrugService.update(+id, data);
   }
 
+  @Patch(':id/receive')
+  async receive(@Param('id') id: string) {
+    return this.maDrugService.receive(+id);
+  }
+
   @Delete(':id')
   async delete(@Param('id') id: string) {
     this.logger.debug(`delete with id: ${id}`);

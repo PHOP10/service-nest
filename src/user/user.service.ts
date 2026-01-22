@@ -1,7 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common'; // <--- เพิ่ม Exception ตรงนี้
 import { UserRepo } from './user.repo';
 import { Prisma } from '@prisma/client';
 import { hashPassword } from 'src/utils/auth-helper';
+import * as bcrypt from 'bcrypt'; // <--- เพิ่ม bcrypt ตรงนี้
 
 @Injectable()
 export class UserService {
@@ -58,5 +65,29 @@ export class UserService {
   async delete(id: number) {
     this.logger.debug(`Deleting user with id: ${id}`);
     return await this.userRepo.delete(id);
+  }
+
+  async changePassword(
+    userId: string,
+    oldPasswordRaw: string,
+    newPasswordRaw: string,
+  ) {
+    const user = await this.findByUserId(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isMatch = await bcrypt.compare(oldPasswordRaw, user.password);
+
+    if (!isMatch) {
+      throw new BadRequestException('รหัสผ่านเดิมไม่ถูกต้อง');
+    }
+
+    const hashedNewPassword = await hashPassword(newPasswordRaw);
+
+    return await this.update(userId, {
+      password: hashedNewPassword,
+    });
   }
 }

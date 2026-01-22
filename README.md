@@ -28,3 +28,5 @@ npm i
 ``` npm install @nestjs/websockets @nestjs/platform-socket.io socket.io````
 ```npm install -D @types/socket.io````
 ```npm install --save-dev @types/multer @types/express```
+``npm install bcrypt``
+``npm install -D @types/bcrypt``
