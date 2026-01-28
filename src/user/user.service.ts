@@ -2,7 +2,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common'; // <--- เพิ่ม Exception ตรงนี้
 import { UserRepo } from './user.repo';

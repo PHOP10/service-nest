@@ -8,23 +8,25 @@ datasource db {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  userId       String    @unique @default(uuid()) @map("user_id") @db.VarChar(50)
-  username     String    @unique
-  password     String
-  firstName    String    @map("first_name")
-  lastName     String    @map("last_name")
-  nickName     String?   @map("nick_name")
-  email        String
-  phoneNumber  String?   @map("phone_number")
-  employeeId   String?   @map("employee_code") @db.VarChar(4)
-  position     String?   @map("position")
-  refreshToken String?
-  role         String?   @default("user")
-  gender       String?   @map("gender")
-  startDate    DateTime? @map("start_date") @db.Timestamptz(6)
-  createdAt    DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
-  updatedAt    DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
+  id               Int       @id @default(autoincrement())
+  userId           String    @unique @default(uuid()) @map("user_id") @db.VarChar(50)
+  username         String    @unique
+  password         String
+  firstName        String    @map("first_name")
+  lastName         String    @map("last_name")
+  nickName         String?   @map("nick_name")
+  email            String
+  phoneNumber      String?   @map("phone_number")
+  employeeId       String?   @map("employee_code") @db.VarChar(4)
+  position         String?   @map("position")
+  refreshToken     String?
+  role             String?   @default("user")
+  gender           String?   @map("gender")
+  startDate        DateTime? @map("start_date") @db.Timestamptz(6)
+  createdAt        DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
+  updatedAt        DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
+  resetToken       String?   @map("reset_token") // เก็บ OTP หรือ Token ชั่วคราว
+  resetTokenExpire DateTime? @map("reset_token_expire") // เก็บเวลาหมดอายุ
 }
 
 model OfficialTravelRequest {
@@ -80,11 +82,16 @@ model MaCar {
   cancelAt       DateTime? @map("cancel_at") @db.Timestamptz(6)
   approvedByName String?   @map("approved_by_name")
   approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  returnByName   String?   @map("return_by_name")
+  returnNote     String?   @map("return_note")
   carId          Int       @map("car_id")
   masterCar      MasterCar @relation(fields: [carId], references: [id])
+  startMileage   Int?      @map("start_mileage")
+  returnMileage  Int?      @map("return_mileage")
   createdName    String?   @map("created_name")
   createdById    String?   @map("created_by_id")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  returnAt       DateTime? @map("return_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
@@ -97,6 +104,7 @@ model MasterCar {
   model                 String                  @map("model")
   status                String                  @default("available") @map("status")
   fuelType              String?                 @map("fuel_type")
+  mileage               Int?                    @default(0) @map("mileage")
   details               String?                 @map("details")
   maCars                MaCar[]
   OfficialTravelRequest OfficialTravelRequest[]
@@ -138,40 +146,38 @@ model MasterLeave {
 }
 
 model VisitHome {
-  id Int @id @default(autoincrement()) @map("id")
-
-  // --- ข้อมูลพื้นฐานผู้ป่วย (จากส่วนบนของฟอร์ม) ---
-  hhcNo            String?        @map("hhc_no") // เลขที่ HHC
-  referralDate     DateTime?      @map("referral_date") // วันที่ส่ง (Referral Date)
-  patientTypeId    Int?           @map("patient_type_id") // ประเภทผู้ป่วย (Relation เดิม)
-  firstName        String?        @map("first_name") // ชื่อผู้ป่วย
-  lastName         String?        @map("last_name") // นามสกุล
-  fullName         String?        @map("full_name") // ชื่อ-นามสกุล (ใช้ field เด
-  age              Int            @map("age") // อายุ
-  hn               String?        @map("hn") // HN (Hospital Number)
-  dob              DateTime?      @map("dob") // วันเดือนปีเกิด
-  cid              String?        @map("cid") // เลข 13 หลัก (Citizen ID)
-  phone            String?        @map("phone") // เบอร์โทร
-  address          String         @map("address") // ที่อยู่จริง
-  allergies        String?        @map("allergies") // แพ้ยา/แพ้อาหาร
-  admissionDate    DateTime?      @map("admission_date") // วันที่เข้ารับการรักษา
-  dischargeDate    DateTime?      @map("discharge_date") // วันที่จำหน่ายออกจาก รพ.
-  temperature      Float?         @map("temperature") // T (อุณหภูมิร่างกาย)
-  pulseRate        Int?           @map("pulse_rate") // PR (อัตราการเต้นหัวใจ BPM)
-  respRate         Int?           @map("resp_rate") // RR (อัตราการหายใจ /min)
-  bloodPressure    String?        @map("blood_pressure") // BP (ความดันโลหิต mmHg)
-  oxygenSat        Float?         @map("oxygen_sat") // O2 sat (%)
-  initialHistory   String?        @map("initial_history") // ประวัติการเจ็บป่วยแรกรับ
-  symptoms         String?        @map("symptoms") // อาการปัจจุบัน ก่อนกลับบ้าน (ใช้ field เดิม )
-  diagnosis        String?        @map("diagnosis") // การวินิจฉัยโรค
-  medication       String?        @map("medication") // ยากลับบ้าน (ใช้ field เดิม, อาจเก็บเป็น Text ยาวๆ หรือ JSON)
-  medicalEquipment String?        @map("medical_equipment") // อุปกรณ์ที่ติดตัวกลับบ้าน
-  careNeeds        String?        @map("care_needs") // ความต้องการในการดูแล (ระบุปัญหาที่พบ)
-  nextAppointment  DateTime?      @map("next_appointment") @db.Timestamptz(6) // การนัดติดตามอาการ (ใช้ field เดิม)
-  visitDate        DateTime       @map("visit_date") @db.Timestamptz(6) // วันที่ไปเยี่ยมจริง (field เดิม)
-  notes            String?        @map("notes") // หมายเหตุเพิ่มเติม (field เดิม)
+  id               Int            @id @default(autoincrement()) @map("id")
+  hhcNo            String?        @map("hhc_no")
+  referralDate     DateTime?      @map("referral_date")
+  patientTypeId    Int?           @map("patient_type_id")
+  firstName        String?        @map("first_name")
+  lastName         String?        @map("last_name")
+  fullName         String?        @map("full_name")
+  age              Int            @map("age")
+  hn               String?        @map("hn")
+  dob              DateTime?      @map("dob")
+  cid              String?        @map("cid")
+  phone            String?        @map("phone")
+  address          String         @map("address")
+  allergies        String?        @map("allergies")
+  admissionDate    DateTime?      @map("admission_date")
+  dischargeDate    DateTime?      @map("discharge_date")
+  temperature      Float?         @map("temperature")
+  pulseRate        Int?           @map("pulse_rate")
+  respRate         Int?           @map("resp_rate")
+  bloodPressure    String?        @map("blood_pressure")
+  oxygenSat        Float?         @map("oxygen_sat")
+  initialHistory   String?        @map("initial_history")
+  symptoms         String?        @map("symptoms")
+  diagnosis        String?        @map("diagnosis")
+  medication       String?        @map("medication")
+  medicalEquipment String?        @map("medical_equipment")
+  careNeeds        String?        @map("care_needs")
+  nextAppointment  DateTime?      @map("next_appointment") @db.Timestamptz(6)
+  visitDate        DateTime       @map("visit_date") @db.Timestamptz(6)
+  notes            String?        @map("notes")
   createdById      String?        @map("created_by_id")
-  createdName      String?        @map("created_name") // ผู้บันทึก
+  createdName      String?        @map("created_name")
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   patientType      MasterPatient? @relation(fields: [patientTypeId], references: [id])
@@ -205,19 +211,47 @@ model MaDrug {
 }
 
 model Drug {
-  id            Int          @id @default(autoincrement()) @map("id")
-  workingCode   String       @unique @map("working_code")
-  name          String       @map("name")
-  drugTypeId    Int          @map("drug_type_id") // FK ไป MasterDrug
-  packagingSize String       @map("packaging_size")
-  price         Float        @map("price")
-  quantity      Int          @map("quantity")
-  note          String?      @map("note")
-  cancelReason  String?      @map("cancel_reason")
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  drugType      MasterDrug   @relation(fields: [drugTypeId], references: [drugTypeId])
+  id            Int            @id @default(autoincrement()) @map("id")
+  workingCode   String         @unique @map("working_code")
+  name          String         @map("name")
+  drugTypeId    Int            @map("drug_type_id")
+  packagingSize String         @map("packaging_size")
+  price         Float          @map("price")
+  quantity      Int            @map("quantity")
+  note          String?        @map("note")
+  cancelReason  String?        @map("cancel_reason")
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  drugType      MasterDrug     @relation(fields: [drugTypeId], references: [drugTypeId])
   MaDrugItem    MaDrugItem[]
+  dispenseItems DispenseItem[]
+}
+
+model Dispense {
+  id            Int            @id @default(autoincrement()) @map("id")
+  dispenseDate  DateTime       @default(now()) @map("dispense_date") @db.Timestamptz(6)
+  dispenserName String?        @map("dispenser_name") // ชื่อเภสัช/จนท. ผู้จ่าย
+  receiverName  String?        @map("receiver_name") // ผู้รับยา (หรือหน่วยงานปลายทาง)
+  status        String         @default("pending") @map("status")
+  note          String?        @map("note") // หมายเหตุ (เช่น จ่ายคนไข้ใน, ตัดยาหมดอายุ)
+  totalPrice    Float?         @map("total_price") // มูลค่ารวมที่จ่ายออก (เผื่อทำรายงาน cost)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  dispenseItems DispenseItem[]
+
+  @@map("dispense")
+}
+
+model DispenseItem {
+  id         Int      @id @default(autoincrement())
+  dispenseId Int      @map("dispense_id")
+  drugId     Int      @map("drug_id")
+  quantity   Int      @map("quantity") // จำนวนที่ตัดจ่าย
+  price      Float?   @map("price") // ราคา ณ ตอนจ่าย (Snapshot ไว้)
+  dispense   Dispense @relation(fields: [dispenseId], references: [id], onDelete: Cascade)
+  drug       Drug     @relation(fields: [drugId], references: [id])
+
+  @@map("dispense_item")
 }
 
 model MasterDrug {
@@ -225,17 +259,16 @@ model MasterDrug {
   drugTypeId  Int     @unique @map("drug_type_id")
   drugType    String  @map("drug_type")
   description String? @map("description")
-  drugs       Drug[] // หนึ่งประเภทยา มีหลายยา
+  drugs       Drug[]
 }
 
 model MaDrugItem {
-  id       Int @id @default(autoincrement())
-  maDrugId Int
-  drugId   Int
-  quantity Int
-
-  maDrug MaDrug @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
-  drug   Drug   @relation(fields: [drugId], references: [id])
+  id       Int     @id @default(autoincrement())
+  maDrugId Int?    @map("ma_drug_id")
+  drugId   Int?    @map("drug_id")
+  quantity Int?    @map("quantity")
+  maDrug   MaDrug? @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
+  drug     Drug?   @relation(fields: [drugId], references: [id])
 
   @@unique([maDrugId, drugId])
 }
@@ -254,6 +287,8 @@ model DurableArticle {
   accumulatedDepreciation Float?    @map("accumulated_depreciation")
   netValue                Float?    @map("net_value")
   type                    String?   @map("type")
+  location                String?   @map("location")
+  status                  String?   @map("status")
   attributes              String?   @map("attributes")
   category                String?   @map("category")
   documentId              String?   @map("document_id")

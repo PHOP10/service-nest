@@ -14,7 +14,6 @@ import { Prisma } from '@prisma/client';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
-
   private logger = new Logger('User Controller');
 
   @Get('')
@@ -32,9 +31,6 @@ export class UserController {
   @Patch('change-password/:userId')
   async changePassword(@Param('userId') userId: string, @Body() body: any) {
     this.logger.debug(`Attempting to change password for userId: ${userId}`);
-    console.log(2);
-    console.log('Received body:', body);
-    // เรียกใช้ฟังก์ชัน changePassword ใน Service (ดูโค้ดด้านล่าง)
     return await this.userService.changePassword(
       userId,
       body.oldPassword,

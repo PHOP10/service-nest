@@ -36,8 +36,9 @@ import { MedicalEquipmentController } from './medicalEquipment/medicalEquipment.
 import { OfficialTravelRequestController } from './officialTravelRequest/officialTravelRequest.controller';
 import { SupportingResourceController } from './supportingResource/supportingResource.controller';
 import { VisitHomeController } from './visitHome/visitHome.controller';
-// import { NotificationsModule } from './notifications/notifications.module';
-// import { NotificationsController } from './notifications/notifications.controller';
+import { DispenseModule } from './dispense/dispense.module';
+import { DispenseController } from './dispense/dispense.controller';
+import { ForgotPasswordModule } from './forgotPassword/forgot-password.module';
 
 @Module({
   imports: [
@@ -64,6 +65,8 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
     OfficialTravelRequestModule,
     SupportingResourceModule,
     VisitHomeModule,
+    DispenseModule,
+    ForgotPasswordModule,
   ],
   controllers: [
     UserController,
@@ -74,6 +77,7 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
     InfectiousWasteController,
     MaCarController,
     MaDrugController,
+    DispenseController,
     MaMedicalEquipmentController,
     MasterCarController,
     MasterDrugController,

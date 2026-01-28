@@ -20,7 +20,7 @@ export class MaDrugService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' }, // คง code เดิมไว้
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -43,7 +43,7 @@ export class MaDrugService {
     return await this.maDrugRepo.delete(id);
   }
 
-  async receive(id: number) {
-    return await this.maDrugRepo.receive(id);
+  async receiveMaDrug(id: number, payload: any) {
+    return await this.maDrugRepo.receiveMaDrugWithTransaction(id, payload);
   }
 }

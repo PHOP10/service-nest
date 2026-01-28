@@ -30,3 +30,6 @@ npm i
 ```npm install --save-dev @types/multer @types/express```
 ``npm install bcrypt``
 ``npm install -D @types/bcrypt``
+
+``npm install nodemailer``
+``npm install @types/nodemailer --save-dev``

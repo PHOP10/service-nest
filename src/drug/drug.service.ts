@@ -8,7 +8,7 @@ export class DrugService {
   private logger = new Logger('DrugService');
 
   async findAll() {
-    return await this.drugRepo.findAll();
+    return await this.drugRepo.findMany({ orderBy: { id: 'desc' } });
   }
 
   async findOne(id: number) {

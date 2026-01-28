@@ -8,7 +8,11 @@ export class MasterCarService {
   private logger = new Logger('MasterCarService');
 
   async findAll() {
-    return await this.masterCarRepo.findAll();
+    return await this.masterCarRepo.findMany({
+      orderBy: {
+        id: 'asc',
+      },
+    });
   }
 
   async findOne(id: number) {

@@ -44,8 +44,11 @@ export class MaDrugController {
   }
 
   @Patch(':id/receive')
-  async receive(@Param('id') id: string) {
-    return this.maDrugService.receive(+id);
+  async receiveMaDrug(
+    @Param('id') id: string, // รับ ID จาก URL
+    @Body() body: any, // รับ items และ totalPrice จาก Body
+  ) {
+    return await this.maDrugService.receiveMaDrug(+id, body);
   }
 
   @Delete(':id')
