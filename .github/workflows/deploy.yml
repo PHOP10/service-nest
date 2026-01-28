@@ -1,0 +1,26 @@
+name: Deploy NestJS Backend
+
+on:
+  push:
+    branches: [ main ] # หรือชื่อ branch ที่คุณใช้
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/www/service-nest
+            git pull origin main
+            npm install
+            npx prisma generate
+            npm run build
+            pm2 restart service-nest # ชื่อแอปใน PM2
