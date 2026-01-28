@@ -1,7 +1,0 @@
-script: |
-            cd /var/www/service-nest
-            git pull origin main
-            npm install
-            npx prisma generate
-            npm run build
-            pm2 restart service-nest
