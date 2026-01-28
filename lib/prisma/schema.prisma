@@ -25,8 +25,8 @@ model User {
   startDate        DateTime? @map("start_date") @db.Timestamptz(6)
   createdAt        DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
   updatedAt        DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
-  resetToken       String?   @map("reset_token") // เก็บ OTP หรือ Token ชั่วคราว
-  resetTokenExpire DateTime? @map("reset_token_expire") // เก็บเวลาหมดอายุ
+  resetToken       String?   @map("reset_token")
+  resetTokenExpire DateTime? @map("reset_token_expire")
 }
 
 model OfficialTravelRequest {

@@ -1,12 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserRepo {
   constructor(private readonly prisma: PrismaService) {}
 
   private logger = new Logger('user service');
+
+  async onModuleInit() {
+    await this.seedAdmin();
+  }
+
+  private async seedAdmin() {
+    const adminExists = await this.prisma.user.findFirst({
+      where: { role: 'admin' },
+    });
+    if (!adminExists) {
+      this.logger.log('No admin found in system. Creating default admin...');
+      const hashedPassword = await bcrypt.hash('admin', 10);
+      await this.prisma.user.create({
+        data: {
+          username: 'admin',
+          password: hashedPassword,
+          firstName: 'System',
+          lastName: 'Admin',
+          email: 'admin@example.com',
+          role: 'admin',
+        },
+      });
+
+      this.logger.log('Default admin user created successfully!');
+    } else {
+      this.logger.log('Admin user already exists.');
+    }
+  }
 
   async findAll() {
     return await this.prisma.user.findMany();
@@ -16,7 +45,6 @@ export class UserRepo {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
-
     return user;
   }
 
