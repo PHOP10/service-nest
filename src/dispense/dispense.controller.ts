@@ -7,6 +7,8 @@ import {
   Body,
   Param,
   Logger,
+  Put,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { DispenseService } from './dispense.service';
 import { Prisma } from '@prisma/client';
@@ -31,7 +33,6 @@ export class DispenseController {
   @Post()
   async create(@Body() data: Prisma.DispenseCreateInput) {
     this.logger.debug('create');
-    // ตรงนี้ Frontend สามารถส่ง JSON แบบ Nested เพื่อบันทึกหัวบิล+รายการยาพร้อมกันได้เลย
     return await this.dispenseService.create(data);
   }
 
@@ -42,6 +43,19 @@ export class DispenseController {
   ) {
     this.logger.debug(`patch update with id: ${id}`);
     return await this.dispenseService.update(+id, data);
+  }
+
+  @Put(':id')
+  async edit(@Param('id') id: string, @Body() body: any) {
+    return await this.dispenseService.editDispense(+id, body);
+  }
+
+  @Patch(':id/execute')
+  async executeDispense(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() payload: any, // รับข้อมูล items, totalPrice ที่ส่งมาจากหน้าบ้าน
+  ) {
+    return await this.dispenseService.execute(id, payload);
   }
 
   @Delete(':id')

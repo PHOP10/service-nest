@@ -46,4 +46,10 @@ export class MaDrugService {
   async receiveMaDrug(id: number, payload: any) {
     return await this.maDrugRepo.receiveMaDrugWithTransaction(id, payload);
   }
+
+  async editMaDrug(id: number, payload: any) {
+    const updateData = { ...payload };
+    delete updateData.id;
+    return await this.maDrugRepo.edit(id, updateData);
+  }
 }

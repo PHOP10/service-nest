@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Logger,
+  Put,
 } from '@nestjs/common';
 import { MaDrugService } from './maDrug.service';
 import { Prisma } from '@prisma/client';
@@ -44,11 +45,13 @@ export class MaDrugController {
   }
 
   @Patch(':id/receive')
-  async receiveMaDrug(
-    @Param('id') id: string, // รับ ID จาก URL
-    @Body() body: any, // รับ items และ totalPrice จาก Body
-  ) {
+  async receiveMaDrug(@Param('id') id: string, @Body() body: any) {
     return await this.maDrugService.receiveMaDrug(+id, body);
+  }
+
+  @Put(':id')
+  async edit(@Param('id') id: string, @Body() body: any) {
+    return await this.maDrugService.editMaDrug(+id, body);
   }
 
   @Delete(':id')

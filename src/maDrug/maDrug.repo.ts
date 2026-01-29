@@ -73,4 +73,30 @@ export class MaDrugRepo {
       return updatedMaDrug;
     });
   }
+
+  async edit(id: number, data: any) {
+    // แยก maDrugItems ออกจากข้อมูล Header
+    const { maDrugItems, ...headerData } = data;
+
+    return await this.prisma.maDrug.update({
+      where: { id },
+      data: {
+        // 1. อัปเดตข้อมูลส่วนหัว (Header) เช่น requestNumber, unit, note
+        ...headerData,
+
+        // 2. จัดการรายการยา (Relation)
+        maDrugItems: {
+          // 2.1 ลบรายการเดิมทิ้งทั้งหมดที่ผูกกับ id นี้ (Reset ของเก่า)
+          deleteMany: {},
+
+          // 2.2 สร้างรายการใหม่ตามที่ส่งมาจากหน้าบ้าน (Insert ของใหม่)
+          create: maDrugItems.map((item: any) => ({
+            drugId: item.drugId,
+            quantity: item.quantity,
+            // ⚠️ ไม่ต้องส่ง id ของ item ไป เพราะเราสร้างใหม่ เดี๋ยว Prisma รัน id ใหม่ให้เอง
+          })),
+        },
+      },
+    });
+  }
 }

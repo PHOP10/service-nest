@@ -230,11 +230,13 @@ model Drug {
 model Dispense {
   id            Int            @id @default(autoincrement()) @map("id")
   dispenseDate  DateTime       @default(now()) @map("dispense_date") @db.Timestamptz(6)
-  dispenserName String?        @map("dispenser_name") // ชื่อเภสัช/จนท. ผู้จ่าย
-  receiverName  String?        @map("receiver_name") // ผู้รับยา (หรือหน่วยงานปลายทาง)
+  dispenserName String?        @map("dispenser_name")
+  receiverName  String?        @map("receiver_name")
   status        String         @default("pending") @map("status")
-  note          String?        @map("note") // หมายเหตุ (เช่น จ่ายคนไข้ใน, ตัดยาหมดอายุ)
-  totalPrice    Float?         @map("total_price") // มูลค่ารวมที่จ่ายออก (เผื่อทำรายงาน cost)
+  note          String?        @map("note")
+  totalPrice    Float?         @map("total_price")
+  cancelReason  String?        @map("cancel_reason")
+  cancelName    String?        @map("cancel_name")
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   dispenseItems DispenseItem[]
@@ -246,8 +248,8 @@ model DispenseItem {
   id         Int      @id @default(autoincrement())
   dispenseId Int      @map("dispense_id")
   drugId     Int      @map("drug_id")
-  quantity   Int      @map("quantity") // จำนวนที่ตัดจ่าย
-  price      Float?   @map("price") // ราคา ณ ตอนจ่าย (Snapshot ไว้)
+  quantity   Int      @map("quantity")
+  price      Float?   @map("price")
   dispense   Dispense @relation(fields: [dispenseId], references: [id], onDelete: Cascade)
   drug       Drug     @relation(fields: [drugId], references: [id])
 

@@ -44,11 +44,18 @@ export class DispenseService {
     });
   }
 
+  async editDispense(id: number, payload: any) {
+    const updateData = { ...payload };
+    delete updateData.id;
+
+    return await this.dispenseRepo.edit(id, updateData);
+  }
+
   async delete(id: number) {
     return await this.dispenseRepo.delete(id);
   }
 
-  async execute(id: number) {
-    return await this.dispenseRepo.executeDispense(id);
+  async execute(id: number, payload: any) {
+    return await this.dispenseRepo.executeDispense(id, payload);
   }
 }
