@@ -13,7 +13,11 @@ export class DispenseService {
       include: {
         dispenseItems: {
           include: {
-            drug: true,
+            drug: {
+              include: {
+                drugType: true,
+              },
+            },
           },
         },
       },

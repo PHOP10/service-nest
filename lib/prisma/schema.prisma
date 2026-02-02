@@ -192,7 +192,7 @@ model MasterPatient {
 
 model MaDrug {
   id            Int          @id @default(autoincrement()) @map("id")
-  requestNumber String?      @unique @map("request_number")
+  requestNumber String?      @map("request_number")
   requestUnit   String       @map("request_unit")
   roundNumber   Int          @map("round_number")
   requesterName String?      @map("requester_name")
@@ -269,6 +269,7 @@ model MaDrugItem {
   maDrugId Int?    @map("ma_drug_id")
   drugId   Int?    @map("drug_id")
   quantity Int?    @map("quantity")
+  price    Float?  @map("price")
   maDrug   MaDrug? @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
   drug     Drug?   @relation(fields: [drugId], references: [id])
 
@@ -301,24 +302,6 @@ model DurableArticle {
   updatedAt               DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
 }
 
-model SupportingResource {
-  id                Int      @id @default(autoincrement()) @map("id")
-  code              String   @unique @map("code")
-  name              String   @map("name")
-  status            String?  @map("status")
-  acquiredDate      DateTime @map("acquired_date") @db.Timestamptz(6)
-  acquisitionType   String?  @map("acquisition_type")
-  description       String?  @map("description")
-  attributes        String?  @map("attributes")
-  category          String?  @map("category")
-  documentId        String?  @map("document_id")
-  responsibleAgency String?  @map("responsible_agency")
-  createdById       String?  @map("created_by_id")
-  createdBy         String?  @map("created_by")
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-}
-
 model MedicalEquipment {
   id            Int       @id @default(autoincrement()) @map("id")
   equipmentName String?   @map("equipment_name")
@@ -347,6 +330,7 @@ model MaMedicalEquipment {
   approveById  String?                  @map("approve_by_id")
   approveBy    String?                  @map("approve_by")
   returnName   String?                  @map("return_name")
+  returnNote   String?                  @map("return_note")
   approveAt    DateTime?                @map("approve_at") @db.Timestamptz(6)
   createdName  String?                  @map("created_name")
   createdAt    DateTime?                @map("created_at") @db.Timestamptz(6)
