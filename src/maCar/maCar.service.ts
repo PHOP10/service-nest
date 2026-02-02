@@ -17,6 +17,7 @@ export class MaCarService {
       },
     });
   }
+
   async findOne(id: number) {
     return await this.maCarRepo.findOne(id);
   }

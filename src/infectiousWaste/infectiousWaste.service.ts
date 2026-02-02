@@ -8,9 +8,12 @@ export class InfectiousWasteService {
   private logger = new Logger('InfectiousWasteService');
 
   async findAll() {
-    return await this.infectiousWasteRepo.findAll();
+    return await this.infectiousWasteRepo.findMany({
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
-
   async findOne(id: number) {
     return await this.infectiousWasteRepo.findOne(id);
   }

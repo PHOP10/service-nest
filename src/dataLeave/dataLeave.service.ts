@@ -10,10 +10,10 @@ export class DataLeaveService {
   async findAll() {
     return this.dataLeaveRepo.findMany({
       include: {
-        masterLeave: true, // ✅ ดึงข้อมูล MasterLeave มาด้วย
+        masterLeave: true,
       },
       orderBy: {
-        updatedAt: 'desc', // (ถ้าต้องการเรียงใหม่สุดก่อน)
+        updatedAt: 'desc',
       },
     });
   }

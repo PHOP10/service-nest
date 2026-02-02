@@ -302,17 +302,17 @@ model DurableArticle {
 }
 
 model SupportingResource {
-  id                Int      @id @default(autoincrement()) @map("id") //ไม่ได้ใช้แล้ว
+  id                Int      @id @default(autoincrement()) @map("id")
   code              String   @unique @map("code")
   name              String   @map("name")
   status            String?  @map("status")
   acquiredDate      DateTime @map("acquired_date") @db.Timestamptz(6)
   acquisitionType   String?  @map("acquisition_type")
   description       String?  @map("description")
-  attributes        String?  @map("attributes") // ลักษณะ/คุณสมบัติ
-  category          String?  @map("category") // ประเภท
-  documentId        String?  @map("document_id") // เลขอ้างอิงเอกสาร
-  responsibleAgency String?  @map("responsible_agency") // หน่วยงานรับผิดชอบ
+  attributes        String?  @map("attributes")
+  category          String?  @map("category")
+  documentId        String?  @map("document_id")
+  responsibleAgency String?  @map("responsible_agency")
   createdById       String?  @map("created_by_id")
   createdBy         String?  @map("created_by")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -377,11 +377,11 @@ model InfectiousWaste {
 
 model Notification {
   id        Int      @id @default(autoincrement())
-  userId    String // ถ้าใช้ Int เปลี่ยนเป็น Int
-  menuKey   String // เช่น "manageMaCar" หรือ "maCarBook"
+  userId    String
+  menuKey   String
   title     String?
   message   String
   isRead    Boolean  @default(false)
-  meta      Json? // เก็บข้อมูลเพิ่มเติม ถ้าต้องการ (e.g. relatedId)
+  meta      Json?
   createdAt DateTime @default(now())
 }

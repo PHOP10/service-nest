@@ -114,13 +114,11 @@ export class DataLeaveController {
   async delete(@Param('id') id: string) {
     this.logger.debug(`🗑️ Delete dataLeave id: ${id}`);
 
-    // 1️⃣ ดึงข้อมูลใบลาออกมาก่อน (เพื่อดูชื่อไฟล์)
     const data = await this.dataLeaveService.findOne(+id);
     if (!data) {
       throw new NotFoundException('ไม่พบข้อมูลใบลา');
     }
 
-    // 2️⃣ ถ้ามีไฟล์แนบ → ลบไฟล์ออกจาก public
     if (data.fileName) {
       const filePath = join(
         process.cwd(),
@@ -143,7 +141,6 @@ export class DataLeaveController {
       }
     }
 
-    // 3️⃣ ลบข้อมูลในฐานข้อมูล
     return await this.dataLeaveService.delete(+id);
   }
 }
