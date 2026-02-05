@@ -17,7 +17,11 @@ async function bootstrap() {
       ' :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" :response-time ms',
     ),
   );
-  app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
+  // app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
+  app.use(
+    '/uploads',
+    express.static(join(__dirname, '..', 'public', 'uploads')),
+  );
   app.setGlobalPrefix('api');
   app.enableCors();
   await app.listen(port);

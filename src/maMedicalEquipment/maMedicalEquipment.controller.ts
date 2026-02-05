@@ -46,10 +46,18 @@ export class MaMedicalEquipmentController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @Body() data: Prisma.MaMedicalEquipmentUpdateInput,
+    @Body() data: Prisma.MaMedicalEquipmentUpdateInput & { actorId?: string },
   ) {
-    this.logger.debug(`patch update with id: ${id}`);
-    return await this.maMedicalEquipmentService.update(+id, data);
+    // 👇 เพิ่มบรรทัดนี้เพื่อดูว่า frontend ส่งมาจริงไหม
+    console.log('Update Data:', data);
+    console.log('Actor ID received:', data.actorId);
+
+    const { actorId, ...updateData } = data;
+    return await this.maMedicalEquipmentService.update(
+      +id,
+      updateData,
+      actorId,
+    );
   }
 
   @Delete(':id')

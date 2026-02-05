@@ -8,25 +8,26 @@ datasource db {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  userId           String    @unique @default(uuid()) @map("user_id") @db.VarChar(50)
-  username         String    @unique
+  id               Int            @id @default(autoincrement())
+  userId           String         @unique @default(uuid()) @map("user_id") @db.VarChar(50)
+  username         String         @unique
   password         String
-  firstName        String    @map("first_name")
-  lastName         String    @map("last_name")
-  nickName         String?   @map("nick_name")
+  firstName        String         @map("first_name")
+  lastName         String         @map("last_name")
+  nickName         String?        @map("nick_name")
   email            String
-  phoneNumber      String?   @map("phone_number")
-  employeeId       String?   @map("employee_code") @db.VarChar(4)
-  position         String?   @map("position")
+  phoneNumber      String?        @map("phone_number")
+  employeeId       String?        @map("employee_code") @db.VarChar(4)
+  position         String?        @map("position")
   refreshToken     String?
-  role             String?   @default("user")
-  gender           String?   @map("gender")
-  startDate        DateTime? @map("start_date") @db.Timestamptz(6)
-  createdAt        DateTime? @default(now()) @map("create_at") @db.Timestamptz(6)
-  updatedAt        DateTime? @updatedAt @map("update_at") @db.Timestamptz(6)
-  resetToken       String?   @map("reset_token")
-  resetTokenExpire DateTime? @map("reset_token_expire")
+  role             String?        @default("user")
+  gender           String?        @map("gender")
+  startDate        DateTime?      @map("start_date") @db.Timestamptz(6)
+  createdAt        DateTime?      @default(now()) @map("create_at") @db.Timestamptz(6)
+  updatedAt        DateTime?      @updatedAt @map("update_at") @db.Timestamptz(6)
+  resetToken       String?        @map("reset_token")
+  resetTokenExpire DateTime?      @map("reset_token_expire")
+  notifications    Notification[]
 }
 
 model OfficialTravelRequest {
@@ -361,11 +362,18 @@ model InfectiousWaste {
 
 model Notification {
   id        Int      @id @default(autoincrement())
-  userId    String
-  menuKey   String
+  userId    String   @map("user_id")
+  menuKey   String   @map("menu_key")
   title     String?
   message   String
-  isRead    Boolean  @default(false)
+  isRead    Boolean  @default(false) @map("is_read")
+  type      String   @default("info")
+  link      String?
   meta      Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@map("notification")
 }

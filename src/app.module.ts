@@ -37,9 +37,11 @@ import { VisitHomeController } from './visitHome/visitHome.controller';
 import { DispenseModule } from './dispense/dispense.module';
 import { DispenseController } from './dispense/dispense.controller';
 import { ForgotPasswordModule } from './forgotPassword/forgot-password.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
