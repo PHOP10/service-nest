@@ -18,10 +18,7 @@ async function bootstrap() {
     ),
   );
   // app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
-  app.use(
-    '/uploads',
-    express.static(join(__dirname, '..', 'public', 'uploads')),
-  );
+  app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
   app.setGlobalPrefix('api');
   app.enableCors();
   await app.listen(port);

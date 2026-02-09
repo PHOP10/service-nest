@@ -45,7 +45,9 @@ export class MaDrugRepo {
 
   async receiveMaDrugWithTransaction(id: number, payload: any) {
     const { items, totalPrice } = payload;
+
     return await this.prisma.$transaction(async (tx) => {
+      // 1. อัปเดตสถานะ Header เป็น Completed
       const updatedMaDrug = await tx.maDrug.update({
         where: { id: id },
         data: {
@@ -57,13 +59,61 @@ export class MaDrugRepo {
 
       if (items && items.length > 0) {
         for (const item of items) {
-          if (item.receivedQuantity && item.receivedQuantity > 0) {
+          // item = { maDrugItemId, drugId, receivedQuantity, expiryDate }
+
+          // 2. ดึงข้อมูลเดิมมาเทียบ (เพื่อหาผลต่างยอด)
+          const originalItem = await tx.maDrugItem.findUnique({
+            where: { id: item.maDrugItemId },
+            include: { drugLot: true },
+          });
+
+          if (!originalItem) continue;
+
+          const oldQty = originalItem.quantity || 0;
+          const newQty = item.receivedQuantity ?? oldQty; // ถ้ารับจริงเป็น null ให้ใช้ยอดเดิม
+          const diff = newQty - oldQty; // ผลต่าง (เช่น เดิม 10 รับจริง 8 -> diff = -2)
+
+          // 3. อัปเดต MaDrugItem (จำนวนรับจริง + วันหมดอายุ)
+          await tx.maDrugItem.update({
+            where: { id: item.maDrugItemId },
+            data: {
+              quantity: newQty,
+              expiryDate: item.expiryDate, // ✅ บันทึกวันหมดอายุที่ยืนยันแล้ว
+            },
+          });
+
+          // 4. จัดการ DrugLot
+          if (originalItem.drugLot) {
+            // 4.1 ถ้ามี Lot อยู่แล้ว (สร้างตอน Create) -> อัปเดตข้อมูลให้ตรงกับความจริง
+            await tx.drugLot.update({
+              where: { id: originalItem.drugLot.id },
+              data: {
+                quantity: newQty, // ปรับยอดใน Lot
+                expiryDate: item.expiryDate, // ปรับวันหมดอายุใน Lot
+              },
+            });
+          } else if (item.expiryDate) {
+            // 4.2 ถ้ายังไม่มี Lot (เผื่อกรณีข้อมูลเก่า) -> สร้างใหม่
+            await tx.drugLot.create({
+              data: {
+                drugId: item.drugId,
+                lotNumber: `LOT-${Date.now()}-${item.maDrugItemId}`,
+                expiryDate: item.expiryDate,
+                quantity: newQty,
+                price: originalItem.price || 0,
+                isActive: true,
+                maDrugItemId: item.maDrugItemId,
+              },
+            });
+          }
+
+          // 5. ปรับปรุงยอด Master Drug (Adjust Stock)
+          // เราใช้ diff เพราะตอน Create เราบวกยอดไปแล้ว ครั้งนี้แค่ปรับปรุงส่วนต่าง
+          if (diff !== 0) {
             await tx.drug.update({
               where: { id: item.drugId },
               data: {
-                quantity: {
-                  increment: item.receivedQuantity,
-                },
+                quantity: { increment: diff }, // ถ้า diff ติดลบ มันจะลดลงเอง
               },
             });
           }
@@ -75,28 +125,79 @@ export class MaDrugRepo {
   }
 
   async edit(id: number, data: any) {
-    // แยก maDrugItems ออกจากข้อมูล Header
     const { maDrugItems, ...headerData } = data;
 
-    return await this.prisma.maDrug.update({
-      where: { id },
-      data: {
-        // 1. อัปเดตข้อมูลส่วนหัว (Header) เช่น requestNumber, unit, note
-        ...headerData,
+    return await this.prisma.$transaction(async (tx) => {
+      // 1. คืนสต็อกของเก่าก่อนลบ (Reverse Stock)
+      const oldItems = await tx.maDrugItem.findMany({
+        where: { maDrugId: id },
+      });
 
-        // 2. จัดการรายการยา (Relation)
-        maDrugItems: {
-          // 2.1 ลบรายการเดิมทิ้งทั้งหมดที่ผูกกับ id นี้ (Reset ของเก่า)
-          deleteMany: {},
+      for (const oldItem of oldItems) {
+        if (oldItem.quantity) {
+          // ลดยอด Master Drug กลับคืนไป
+          await tx.drug.update({
+            where: { id: oldItem.drugId },
+            data: { quantity: { decrement: oldItem.quantity } },
+          });
+        }
+        // ลบ Lot ที่เกี่ยวข้อง (ถ้ามี)
+        await tx.drugLot.deleteMany({
+          where: { maDrugItemId: oldItem.id },
+        });
+      }
 
-          // 2.2 สร้างรายการใหม่ตามที่ส่งมาจากหน้าบ้าน (Insert ของใหม่)
-          create: maDrugItems.map((item: any) => ({
-            drugId: item.drugId,
-            quantity: item.quantity,
-            // ⚠️ ไม่ต้องส่ง id ของ item ไป เพราะเราสร้างใหม่ เดี๋ยว Prisma รัน id ใหม่ให้เอง
-          })),
-        },
-      },
+      // 2. ลบรายการเก่าทิ้ง
+      await tx.maDrugItem.deleteMany({
+        where: { maDrugId: id },
+      });
+
+      // 3. อัปเดต Header
+      await tx.maDrug.update({
+        where: { id },
+        data: headerData,
+      });
+      // 4. สร้างรายการใหม่ + สร้าง Lot ใหม่ + บวกสต็อกใหม่
+      if (maDrugItems && maDrugItems.length > 0) {
+        for (const item of maDrugItems) {
+          // 4.1 สร้าง Item
+          const newItem = await tx.maDrugItem.create({
+            data: {
+              maDrugId: id,
+              drugId: item.drugId,
+              quantity: item.quantity,
+              price: item.price,
+              expiryDate: item.expiryDate,
+            },
+          });
+
+          // 4.2 สร้าง Lot ใหม่
+          if (item.expiryDate) {
+            await tx.drugLot.create({
+              data: {
+                drugId: item.drugId,
+                lotNumber: `LOT-${Date.now()}-${newItem.id}`,
+                expiryDate: item.expiryDate,
+                quantity: item.quantity,
+                price: item.price || 0,
+                isActive: true,
+                maDrugItemId: newItem.id,
+              },
+            });
+          }
+
+          // 4.3 บวกสต็อก Master Drug
+          await tx.drug.update({
+            where: { id: item.drugId },
+            data: { quantity: { increment: item.quantity } },
+          });
+        }
+      }
+
+      return await tx.maDrug.findUnique({
+        where: { id },
+        include: { maDrugItems: true },
+      });
     });
   }
 }

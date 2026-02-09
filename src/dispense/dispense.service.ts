@@ -1,21 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ConflictException } from '@nestjs/common';
 import { DispenseRepo } from './dispense.repo';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service'; // ✅ Import
-import { NotificationsService } from '../notifications/notifications.service'; // ✅ Import
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DispenseService {
   constructor(
     private readonly dispenseRepo: DispenseRepo,
-    private readonly prisma: PrismaService, // ✅ Inject
-    private readonly notiService: NotificationsService, // ✅ Inject
+    private readonly prisma: PrismaService,
+    private readonly notiService: NotificationsService,
   ) {}
   private logger = new Logger('DispenseService');
 
   async findAll() {
     return await this.dispenseRepo.findMany({
-      orderBy: { id: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: {
         dispenseItems: {
           include: {
@@ -43,10 +43,101 @@ export class DispenseService {
     });
   }
 
-  // ✅ 1. Create (Pending): สร้างใบจ่ายยา -> แจ้ง Admin
+  // ✅ 1. Create (Pending): สร้างใบจ่ายยา + ตัดสต็อก FEFO -> แจ้ง Admin
   async create(data: Prisma.DispenseCreateInput) {
-    const newDispense = await this.dispenseRepo.create(data);
+    // ---------------------------------------------------------
+    // ส่วนที่ 1: Transaction (บันทึกข้อมูล + ตัดสต็อก FEFO)
+    // ---------------------------------------------------------
+    // ⚠️ แก้ไข: เอาผลลัพธ์ใส่ตัวแปร result ก่อน อย่าเพิ่ง return
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 1.1 สร้างใบจ่ายยา (Header)
+      const newDispense = await tx.dispense.create({
+        data: {
+          ...data,
+          dispenseItems: undefined, // เราจะสร้าง Item เองข้างล่าง
+        },
+      });
 
+      // ดึงรายการยาที่ส่งมาจาก Frontend
+      const itemsInput = (data.dispenseItems as any)?.create || [];
+
+      // 1.2 วนลูปตัดสต็อกทีละรายการ
+      for (const itemInput of itemsInput) {
+        const drugId = itemInput.drugId;
+        let qtyNeeded = itemInput.quantity;
+        const price = itemInput.price;
+
+        // A. เช็คยอดรวมก่อนว่าพอไหม (Master Stock)
+        const drugMaster = await tx.drug.findUnique({ where: { id: drugId } });
+        if (!drugMaster || drugMaster.quantity < qtyNeeded) {
+          throw new ConflictException(
+            `ยา ${drugMaster?.name || drugId} มีของไม่พอ (ขาด ${
+              qtyNeeded - (drugMaster?.quantity || 0)
+            })`,
+          );
+        }
+
+        // B. ดึง Lot ที่มีของ โดยเรียงตามวันหมดอายุ (FEFO Logic) 🟢
+        const lots = await tx.drugLot.findMany({
+          where: {
+            drugId: drugId,
+            quantity: { gt: 0 }, // เอาเฉพาะที่มีของ
+            isActive: true,
+          },
+          orderBy: { expiryDate: 'asc' }, // เรียงวันหมดอายุ น้อย -> มาก
+        });
+
+        let currentLotIndex = 0;
+
+        // C. ตัดสต็อกตาม Lot
+        while (qtyNeeded > 0) {
+          if (currentLotIndex >= lots.length) {
+            // กรณี Data Inconsistency (Master บอกมี แต่ Lot ไม่มี)
+            throw new ConflictException(
+              `ยา ${drugMaster.name} ข้อมูลสต็อก Lot ไม่ถูกต้อง (หาย)`,
+            );
+          }
+
+          const lot = lots[currentLotIndex];
+          const deductAmount = Math.min(lot.quantity, qtyNeeded); // ตัดเท่าที่มี หรือเท่าที่ต้องการ
+
+          // อัปเดต Lot
+          await tx.drugLot.update({
+            where: { id: lot.id },
+            data: {
+              quantity: { decrement: deductAmount },
+              // ถ้าหมดเกลี้ยง ปิด Active ไปเลยก็ได้
+              isActive: lot.quantity - deductAmount > 0,
+            },
+          });
+
+          qtyNeeded -= deductAmount;
+          currentLotIndex++;
+        }
+
+        // D. สร้าง DispenseItem บันทึกประวัติ
+        await tx.dispenseItem.create({
+          data: {
+            dispenseId: newDispense.id,
+            drugId: drugId,
+            quantity: itemInput.quantity,
+            price: price, // ราคาขาย
+          },
+        });
+
+        // E. อัปเดตยอดรวม Master Drug
+        await tx.drug.update({
+          where: { id: drugId },
+          data: { quantity: { decrement: itemInput.quantity } },
+        });
+      }
+
+      return newDispense;
+    });
+
+    // ---------------------------------------------------------
+    // ส่วนที่ 2: Notification (แจ้งเตือนหลังจาก Transaction สำเร็จ)
+    // ---------------------------------------------------------
     try {
       const admins = await this.prisma.user.findMany({
         where: { role: 'admin' },
@@ -57,18 +148,19 @@ export class DispenseService {
       if (adminIds.length > 0) {
         await this.notiService.createNotification({
           userId: adminIds,
-          menuKey: 'manageDrug', // 🔔 เมนู Admin (จัดการเบิกจ่ายยา)
+          menuKey: 'manageDrug', // 🔔 เมนู Admin
           title: '💊 มีรายการจ่ายยาใหม่',
-          message: `รายการ ID: ${newDispense.id} (รอตรวจสอบ)`,
+          message: `รายการ ID: ${result.id} (รอตรวจสอบ)`,
           type: 'info',
-          meta: { documentId: newDispense.id },
+          meta: { documentId: result.id },
         });
       }
     } catch (error) {
       this.logger.error('Failed to send notification on create', error);
     }
 
-    return newDispense;
+    // ✅ ค่อย return ผลลัพธ์กลับไป
+    return result;
   }
 
   // ✅ 2. Update: แก้ไขข้อมูลทั่วไป
@@ -110,7 +202,7 @@ export class DispenseService {
     try {
       const notificationsToCheck = await this.prisma.notification.findMany({
         where: {
-          menuKey: { in: ['maDrug', 'manageDrug'] }, // เช็คทั้ง 2 เมนูที่เกี่ยวข้อง
+          menuKey: { in: ['maDrug', 'manageDrug'] },
         },
       });
 
@@ -130,10 +222,9 @@ export class DispenseService {
     return await this.dispenseRepo.delete(id);
   }
 
-  // ✅ 5. Execute: ดำเนินการจ่ายยา (Completed) -> แจ้ง Admin
+  // ✅ 5. Execute: ดำเนินการจ่ายยา (Completed)
   async execute(id: number, payload: any) {
     const result = await this.dispenseRepo.executeDispense(id, payload);
-    // แจ้งเตือน Admin ว่าจ่ายยาสำเร็จแล้ว
     this.handleStatusNotification(result, 'completed');
     return result;
   }
@@ -142,11 +233,10 @@ export class DispenseService {
   private async handleStatusNotification(dispenseData: any, newStatus: string) {
     try {
       const dispenseId = dispenseData.id;
-      // เนื่องจาก Model ไม่มี createdById เราจะใช้ dispenserName แสดงผลแทน
       const dispenserName = dispenseData.dispenserName || 'เจ้าหน้าที่';
 
       // =========================================================
-      // กลุ่มที่ 1: Approved / Canceled -> แจ้ง PHARMACY (ห้องยา)
+      // กลุ่มที่ 1: Approved / Canceled -> แจ้ง PHARMACY
       // =========================================================
       if (['approved', 'canceled'].includes(newStatus)) {
         let title = '';
@@ -166,7 +256,6 @@ export class DispenseService {
             break;
         }
 
-        // หา User ที่เป็น Role Pharmacy ทั้งหมด
         const pharmacies = await this.prisma.user.findMany({
           where: { role: 'pharmacy' },
           select: { userId: true },
@@ -176,7 +265,7 @@ export class DispenseService {
         if (pharmacyIds.length > 0) {
           await this.notiService.createNotification({
             userId: pharmacyIds,
-            menuKey: 'maDrug', // 🔔 เมนู Pharmacy (เบิกจ่ายยา)
+            menuKey: 'maDrug',
             title,
             message,
             type,
@@ -184,7 +273,6 @@ export class DispenseService {
           });
         }
       }
-
       // =========================================================
       // กลุ่มที่ 2: Completed / Pending -> แจ้ง ADMIN
       // =========================================================
@@ -212,7 +300,7 @@ export class DispenseService {
 
           await this.notiService.createNotification({
             userId: adminIds,
-            menuKey: 'manageDrug', // 🔔 เมนู Admin (จัดการเบิกจ่ายยา)
+            menuKey: 'manageDrug',
             title,
             message,
             type,

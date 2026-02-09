@@ -3,6 +3,7 @@ import { OfficialTravelRequestRepo } from './officialTravelRequest.repo';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class OfficialTravelRequestService {
@@ -43,7 +44,7 @@ export class OfficialTravelRequestService {
       if (approverIds.length > 0) {
         await this.notiService.createNotification({
           userId: approverIds,
-          menuKey: 'manageOfficialTravelRequest', // 🔔 แจ้งเมนูจัดการ
+          menuKey: 'manageOfficialTravelRequest',
           title: 'รายการขอไปราชการใหม่',
           message: `หัวข้อ: ${newRequest.title || '-'} | สถานที่: ${
             newRequest.location
@@ -219,5 +220,26 @@ export class OfficialTravelRequestService {
     } catch (error) {
       this.logger.error('Failed to handle status notification', error);
     }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleCronStatusUpdate() {
+    this.logger.debug('Running auto-update status task...');
+
+    const now = new Date();
+
+    const result = await this.prisma.officialTravelRequest.updateMany({
+      where: {
+        status: 'approve',
+        endDate: {
+          lt: now,
+        },
+      },
+      data: {
+        status: 'success',
+      },
+    });
+
+    this.logger.debug(`Updated ${result.count} requests to success status.`);
   }
 }

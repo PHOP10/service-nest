@@ -224,8 +224,25 @@ model Drug {
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   drugType      MasterDrug     @relation(fields: [drugTypeId], references: [drugTypeId])
+  drugLots      DrugLot[]
   MaDrugItem    MaDrugItem[]
   dispenseItems DispenseItem[]
+}
+
+model DrugLot {
+  id           Int         @id @default(autoincrement())
+  drugId       Int         @map("drug_id")
+  lotNumber    String?     @map("lot_number")
+  expiryDate   DateTime    @map("expiry_date") @db.Date
+  price        Float       @map("price")
+  quantity     Int         @map("quantity")
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  drug         Drug        @relation(fields: [drugId], references: [id])
+  maDrugItemId Int?        @unique @map("ma_drug_item_id")
+  maDrugItem   MaDrugItem? @relation(fields: [maDrugItemId], references: [id])
+
+  @@map("drug_lot")
 }
 
 model Dispense {
@@ -266,13 +283,15 @@ model MasterDrug {
 }
 
 model MaDrugItem {
-  id       Int     @id @default(autoincrement())
-  maDrugId Int?    @map("ma_drug_id")
-  drugId   Int?    @map("drug_id")
-  quantity Int?    @map("quantity")
-  price    Float?  @map("price")
-  maDrug   MaDrug? @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
-  drug     Drug?   @relation(fields: [drugId], references: [id])
+  id         Int       @id @default(autoincrement())
+  maDrugId   Int?      @map("ma_drug_id")
+  drugId     Int?      @map("drug_id")
+  quantity   Int?      @map("quantity")
+  price      Float?    @map("price")
+  maDrug     MaDrug?   @relation(fields: [maDrugId], references: [id], onDelete: Cascade)
+  drug       Drug?     @relation(fields: [drugId], references: [id])
+  expiryDate DateTime? @map("expiry_date") @db.Date
+  drugLot    DrugLot?
 
   @@unique([maDrugId, drugId])
 }

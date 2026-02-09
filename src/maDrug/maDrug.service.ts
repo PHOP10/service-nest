@@ -24,7 +24,7 @@ export class MaDrugService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
@@ -32,12 +32,55 @@ export class MaDrugService {
     return await this.maDrugRepo.findOne(id);
   }
 
-  // ✅ 1. Create (Pending): Pharmacy เบิก -> แจ้ง Admin
+  // ✅ 1. Create (Pending): Pharmacy เบิก -> สร้าง Lot -> ตัดสต็อก -> แจ้ง Admin
   async create(data: Prisma.MaDrugCreateInput) {
-    const newRequest = await this.maDrugRepo.create(data);
+    // ---------------------------------------------------------
+    // ส่วนที่ 1: Transaction (บันทึกข้อมูล + จัดการสต็อก)
+    // ---------------------------------------------------------
+    const newMaDrug = await this.prisma.$transaction(async (tx) => {
+      // 1.1 สร้างใบเบิก (Header & Items)
+      const created = await tx.maDrug.create({
+        data,
+        include: { maDrugItems: true },
+      });
 
+      // 1.2 วนลูปจัดการ DrugLot และ Stock
+      for (const item of created.maDrugItems) {
+        if (item.drugId && item.quantity && item.quantity > 0) {
+          // A. สร้าง DrugLot ใหม่ (ถ้ามีวันหมดอายุระบุมา)
+          if (item.expiryDate) {
+            await tx.drugLot.create({
+              data: {
+                drugId: item.drugId,
+                lotNumber: `LOT-${Date.now()}-${item.id}`, // Generate Lot Number
+                expiryDate: item.expiryDate,
+                quantity: item.quantity,
+                price: item.price || 0,
+                isActive: true,
+                maDrugItemId: item.id, // Link กลับไปหารายการนำเข้า
+              },
+            });
+          }
+
+          // B. บวกยอดรวมเข้า Master Drug (Stock รวม)
+          await tx.drug.update({
+            where: { id: item.drugId },
+            data: {
+              quantity: { increment: item.quantity },
+              // อัปเดตราคาล่าสุดด้วย (ถ้าต้องการ)
+              price: item.price ? item.price : undefined,
+            },
+          });
+        }
+      }
+
+      return created; // ส่งค่ากลับออกมาจาก Transaction
+    });
+
+    // ---------------------------------------------------------
+    // ส่วนที่ 2: Notification (อยู่นอก Transaction)
+    // ---------------------------------------------------------
     try {
-      // แจ้ง Admin เท่านั้น
       const admins = await this.prisma.user.findMany({
         where: { role: 'admin' },
         select: { userId: true },
@@ -47,20 +90,20 @@ export class MaDrugService {
       if (adminIds.length > 0) {
         await this.notiService.createNotification({
           userId: adminIds,
-          menuKey: 'manageDrug', // 🔔 เมนู Admin
+          menuKey: 'manageDrug', // เมนู Admin
           title: '💊 มีการเบิกยารายการใหม่',
           message: `ใบเบิกเลขที่: ${
-            newRequest.requestNumber || '-'
+            newMaDrug.requestNumber || '-'
           } (รอตรวจสอบ)`,
           type: 'info',
-          meta: { documentId: newRequest.id },
+          meta: { documentId: newMaDrug.id },
         });
       }
     } catch (error) {
       this.logger.error('Failed to send notification on create', error);
     }
 
-    return newRequest;
+    return newMaDrug;
   }
 
   // ✅ 2. Update: แก้ไขข้อมูลทั่วไป
@@ -136,8 +179,6 @@ export class MaDrugService {
   // ✅ 6. Helper Function: แยกการแจ้งเตือนตาม Role
   private async handleStatusNotification(requestData: any, newStatus: string) {
     try {
-      // ⚠️ จำเป็นต้องมี createdById เพื่อแจ้งกลับหา Pharmacy คนนั้น
-      // ถ้าใน Model ไม่มี ให้ลองใช้ logic แจ้งเตือนตาม Role 'pharmacy' แทน
       const requesterId = (requestData as any).createdById;
       const requestId = requestData.id;
       const reqNo = requestData.requestNumber || '-';

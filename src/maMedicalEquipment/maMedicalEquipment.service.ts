@@ -184,15 +184,35 @@ export class MaMedicalEquipmentService {
     actorId?: string,
   ) {
     try {
-      const requesterId = requestData.createdById;
+      // ⚠️ จุดสำคัญ: requestData.createdById อาจจะเป็น Int
+      const rawRequesterId = requestData.createdById;
       const requestId = requestData.id;
-      // ✅ ดึงชื่อคนรับคืนมาใช้แสดงผล
       const returnerName = requestData.returnName || 'เจ้าหน้าที่';
+
+      // 🔍 ค้นหา User ตัวจริงเพื่อเอา UUID (userId) ที่ถูกต้อง
+      let targetUserUuid: string | null = null;
+
+      if (rawRequesterId) {
+        // ลองเช็คว่าเป็น UUID หรือไม่ (ถ้าสั้นๆ หรือเป็นตัวเลข น่าจะเป็น Int ID)
+        const isUuid = String(rawRequesterId).length > 20;
+
+        if (isUuid) {
+          targetUserUuid = String(rawRequesterId);
+        } else {
+          // กรณีเป็น Int ให้ไปค้นหาใน DB
+          const user = await this.prisma.user.findUnique({
+            where: { id: Number(rawRequesterId) }, // ค้นด้วย Int id
+            select: { userId: true }, // ขอ UUID ออกมา
+          });
+          targetUserUuid = user?.userId || null;
+        }
+      }
 
       // =========================================================
       // กลุ่มที่ 1: แจ้งเตือน User (Approve, Cancel, Verified)
       // =========================================================
       if (['approve', 'cancel', 'verified'].includes(newStatus)) {
+        // ... (title/message logic เหมือนเดิม) ...
         let title = '';
         let message = '';
         let type = 'info';
@@ -215,14 +235,15 @@ export class MaMedicalEquipmentService {
             break;
         }
 
-        if (requesterId) {
+        // ✅ ใช้ targetUserUuid (UUID) แทน ID เดิม
+        if (targetUserUuid) {
           await this.notiService.clearOpenNotifications(
-            String(requesterId),
-            'medicalEquipment', // 🔔 Key User
+            targetUserUuid, // ใช้ UUID
+            'medicalEquipment',
             requestId,
           );
           await this.notiService.createNotification({
-            userId: requesterId,
+            userId: targetUserUuid, // ใช้ UUID ที่ถูกต้อง (DB จะไม่ Error แล้ว)
             menuKey: 'medicalEquipment',
             title,
             message,
@@ -233,10 +254,10 @@ export class MaMedicalEquipmentService {
       }
 
       // =========================================================
-      // กลุ่มที่ 2: สถานะ RETURN (รับคืนแล้ว)
+      // กลุ่มที่ 2: สถานะ RETURN
       // =========================================================
       else if (newStatus === 'return') {
-        // 2.1 แจ้ง Admin (แสดงชื่อคนรับคืนในข้อความ)
+        // ... (Logic แจ้ง Admin เหมือนเดิม เพราะ Admin ดึงจาก Role ได้ UUID ถูกอยู่แล้ว) ...
         const approvers = await this.prisma.user.findMany({
           where: { role: { in: ['admin', 'asset'] } },
           select: { userId: true },
@@ -246,7 +267,7 @@ export class MaMedicalEquipmentService {
         if (adminIds.length > 0) {
           await this.notiService.createNotification({
             userId: adminIds,
-            menuKey: 'maMedicalEquipment', // 🔔 Key Admin
+            menuKey: 'maMedicalEquipment',
             title: '↩️ มีการรับเครื่องมือคืน',
             message: `รับคืนโดย: ${returnerName} (ID: ${requestId}) รอตรวจปิดงาน`,
             type: 'warning',
@@ -254,20 +275,22 @@ export class MaMedicalEquipmentService {
           });
         }
 
-        // 2.2 แจ้ง User (เจ้าของเรื่อง) เฉพาะเมื่อคนอื่นรับแทน
-        if (requesterId) {
-          // ใช้ actorId เช็คว่าเป็นคนเดียวกันไหม (ถ้าไม่มี actorId ส่งมา ก็จะแจ้งเตือนปกติ ซึ่งปลอดภัยกว่าไม่แจ้ง)
+        // แจ้ง User เจ้าของเรื่อง (ถ้าคนอื่นรับแทน)
+        if (targetUserUuid) {
+          // เช็ค actorId (ถ้ามี) กับ UUID
+          // ต้องระวัง: actorId ที่ส่งมาจาก Frontend เป็น UUID หรือ Int?
+          // ปกติ session.user.id ใน frontend มักจะเป็น UUID ถ้าใช้ NextAuth
           const isSelfAction =
-            actorId && String(actorId) === String(requesterId);
+            actorId && String(actorId) === String(targetUserUuid);
 
           if (!isSelfAction) {
             await this.notiService.clearOpenNotifications(
-              String(requesterId),
+              targetUserUuid,
               'medicalEquipment',
               requestId,
             );
             await this.notiService.createNotification({
-              userId: requesterId,
+              userId: targetUserUuid, // ใช้ UUID
               menuKey: 'medicalEquipment',
               title: '📦 เครื่องมือถูกรับคืนแล้ว',
               message: `รายการนี้ถูกรับคืนไปแล้ว โดยคุณ "${returnerName}"`,
