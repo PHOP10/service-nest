@@ -33,3 +33,6 @@ npm i
 
 ``npm install nodemailer``
 ``npm install @types/nodemailer --save-dev``
+```npm install --save-dev @types/multer @types/express````
+``npm install bcrypt```
+``npm install -D @types/bcrypt```
