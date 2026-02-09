@@ -8,7 +8,12 @@ export class VisitHomeService {
   private logger = new Logger('VisitHomeService');
 
   async findAll() {
-    return await this.visitHomeRepo.findAll();
+    return await this.visitHomeRepo.findMany({
+      include: {
+        patientType: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
   }
 
   async findOne(id: number) {

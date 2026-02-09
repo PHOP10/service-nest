@@ -17,10 +17,26 @@ async function bootstrap() {
       ' :remote-user [:date[clf]] ":method :url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent" :response-time ms',
     ),
   );
+  // app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
   app.use('/uploads', express.static(join(process.cwd(), 'public', 'uploads')));
   app.setGlobalPrefix('api');
   app.enableCors();
   await app.listen(port);
   logger.verbose(`Server listening on port ${port}`);
+
+  const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map((origin) => origin.trim())
+    : ['http://localhost:3000/'];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
 }
 bootstrap();

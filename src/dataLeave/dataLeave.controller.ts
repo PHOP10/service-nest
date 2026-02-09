@@ -18,6 +18,7 @@ import { DataLeaveService } from './dataLeave.service';
 import { Prisma } from '@prisma/client';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import { File } from 'multer';
+import { BadRequestException } from '@nestjs/common';
 
 @Controller('dataLeave')
 export class DataLeaveController {
@@ -53,6 +54,8 @@ export class DataLeaveController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, callback) => {
+          // แนะนำให้ใช้ process.cwd() เพื่ออ้างอิงจาก Root Project เสมอ
+          // จะได้ไม่ต้องมานั่งนับจุด .. ว่าลึกแค่ไหนใน folder dist
           const uploadPath = join(
             process.cwd(),
             'public',
@@ -68,12 +71,22 @@ export class DataLeaveController {
           const uniqueSuffix =
             Date.now() + '-' + Math.round(Math.random() * 1e9);
           const ext = extname(file.originalname);
-          const filename = `${uniqueSuffix}${ext}`;
-          callback(null, filename);
+          callback(null, `${uniqueSuffix}${ext}`);
         },
       }),
-      limits: {
-        fileSize: 5 * 1024 * 1024,
+      // 2. Limits (เหมือนเดิม ดีแล้ว)
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      // 3. File Filter (สำคัญมาก! ต้องเพิ่ม)
+      fileFilter: (req, file, callback) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|pdf)$/)) {
+          return callback(
+            new BadRequestException(
+              'อนุญาตเฉพาะไฟล์รูปภาพ (jpg, png) และ PDF เท่านั้น',
+            ),
+            false,
+          );
+        }
+        callback(null, true);
       },
     }),
   )
@@ -114,13 +127,11 @@ export class DataLeaveController {
   async delete(@Param('id') id: string) {
     this.logger.debug(`🗑️ Delete dataLeave id: ${id}`);
 
-    // 1️⃣ ดึงข้อมูลใบลาออกมาก่อน (เพื่อดูชื่อไฟล์)
     const data = await this.dataLeaveService.findOne(+id);
     if (!data) {
       throw new NotFoundException('ไม่พบข้อมูลใบลา');
     }
 
-    // 2️⃣ ถ้ามีไฟล์แนบ → ลบไฟล์ออกจาก public
     if (data.fileName) {
       const filePath = join(
         process.cwd(),
@@ -143,7 +154,6 @@ export class DataLeaveController {
       }
     }
 
-    // 3️⃣ ลบข้อมูลในฐานข้อมูล
     return await this.dataLeaveService.delete(+id);
   }
 }

@@ -19,7 +19,6 @@ import { MasterLeaveModule } from './masterLeave/masterLeave.module';
 import { MasterPatientModule } from './masterPatient/masterPatient.module';
 import { MedicalEquipmentModule } from './medicalEquipment/medicalEquipment.module';
 import { OfficialTravelRequestModule } from './officialTravelRequest/officialTravelRequest.module';
-import { SupportingResourceModule } from './supportingResource/supportingResource.module';
 import { VisitHomeModule } from './visitHome/visitHome.module';
 import { DataLeaveController } from './dataLeave/dataLeave.controller';
 import { DrugController } from './drug/drug.controller';
@@ -34,14 +33,15 @@ import { MasterLeaveController } from './masterLeave/masterLeave.controller';
 import { MasterPatientController } from './masterPatient/masterPatient.controller';
 import { MedicalEquipmentController } from './medicalEquipment/medicalEquipment.controller';
 import { OfficialTravelRequestController } from './officialTravelRequest/officialTravelRequest.controller';
-import { SupportingResourceController } from './supportingResource/supportingResource.controller';
 import { VisitHomeController } from './visitHome/visitHome.controller';
 import { DispenseModule } from './dispense/dispense.module';
 import { DispenseController } from './dispense/dispense.controller';
 import { ForgotPasswordModule } from './forgotPassword/forgot-password.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -63,7 +63,6 @@ import { ForgotPasswordModule } from './forgotPassword/forgot-password.module';
     MasterPatientModule,
     MedicalEquipmentModule,
     OfficialTravelRequestModule,
-    SupportingResourceModule,
     VisitHomeModule,
     DispenseModule,
     ForgotPasswordModule,
@@ -85,7 +84,6 @@ import { ForgotPasswordModule } from './forgotPassword/forgot-password.module';
     MasterPatientController,
     MedicalEquipmentController,
     OfficialTravelRequestController,
-    SupportingResourceController,
     VisitHomeController,
   ],
   providers: [PrismaService],
