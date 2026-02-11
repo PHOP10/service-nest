@@ -51,7 +51,7 @@ export class MaDrugController {
 
   @Put(':id')
   async edit(@Param('id') id: string, @Body() body: any) {
-    return await this.maDrugService.editMaDrug(+id, body);
+    return await this.maDrugService.update(+id, body);
   }
 
   @Delete(':id')

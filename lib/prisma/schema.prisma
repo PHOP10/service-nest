@@ -205,6 +205,7 @@ model MaDrug {
   status        String       @map("status")
   cancelReason  String?      @map("cancel_reason")
   cancelName    String?      @map("cancel_name")
+  createdById   String?      @map("created_by_id")
   createdName   String?      @map("created_name")
   createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -255,6 +256,7 @@ model Dispense {
   totalPrice    Float?         @map("total_price")
   cancelReason  String?        @map("cancel_reason")
   cancelName    String?        @map("cancel_name")
+  createdById   String?        @map("created_by_id")
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   dispenseItems DispenseItem[]

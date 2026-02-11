@@ -32,54 +32,53 @@ export class MaDrugService {
     return await this.maDrugRepo.findOne(id);
   }
 
-  // ✅ 1. Create (Pending): Pharmacy เบิก -> สร้าง Lot -> ตัดสต็อก -> แจ้ง Admin
-  async create(data: Prisma.MaDrugCreateInput) {
-    // ---------------------------------------------------------
-    // ส่วนที่ 1: Transaction (บันทึกข้อมูล + จัดการสต็อก)
-    // ---------------------------------------------------------
+  // 🟢 1. Create (Pending): ห้องยาขอเบิก -> สร้างบิลเฉยๆ
+  // 🎯 ดักทางแบบขั้นสุด! แกะข้อมูลทีละตัวเพื่อไม่ให้ Prisma อัปเดตสต็อกเอง
+  // 🟢 1. Create (Pending): ห้องยาขอเบิก
+  async create(data: any) {
+    // 🚨 วางกับดักเช็คว่าโค้ดใหม่ทำงานหรือไม่!
+    console.log(
+      '\n\n🚀🚀🚀 === เข้าสู่ฟังก์ชัน CREATE (โค้ดใหม่ล่าสุด) === 🚀🚀🚀\n\n',
+    );
+
     const newMaDrug = await this.prisma.$transaction(async (tx) => {
-      // 1.1 สร้างใบเบิก (Header & Items)
-      const created = await tx.maDrug.create({
-        data,
-        include: { maDrugItems: true },
+      const itemsToCreate = data.maDrugItems?.create || [];
+
+      const createdHeader = await tx.maDrug.create({
+        data: {
+          requestNumber: data.requestNumber,
+          requestUnit: data.requestUnit,
+          roundNumber: data.roundNumber,
+          requesterName: data.requesterName,
+          requestDate: data.requestDate,
+          note: data.note,
+          status: 'pending',
+          totalPrice: data.totalPrice,
+          quantityUsed: data.quantityUsed,
+          createdById: data.createdById,
+        },
       });
 
-      // 1.2 วนลูปจัดการ DrugLot และ Stock
-      for (const item of created.maDrugItems) {
-        if (item.drugId && item.quantity && item.quantity > 0) {
-          // A. สร้าง DrugLot ใหม่ (ถ้ามีวันหมดอายุระบุมา)
-          if (item.expiryDate) {
-            await tx.drugLot.create({
-              data: {
-                drugId: item.drugId,
-                lotNumber: `LOT-${Date.now()}-${item.id}`, // Generate Lot Number
-                expiryDate: item.expiryDate,
-                quantity: item.quantity,
-                price: item.price || 0,
-                isActive: true,
-                maDrugItemId: item.id, // Link กลับไปหารายการนำเข้า
-              },
-            });
-          }
-
-          // B. บวกยอดรวมเข้า Master Drug (Stock รวม)
-          await tx.drug.update({
-            where: { id: item.drugId },
+      if (itemsToCreate.length > 0) {
+        for (const item of itemsToCreate) {
+          await tx.maDrugItem.create({
             data: {
-              quantity: { increment: item.quantity },
-              // อัปเดตราคาล่าสุดด้วย (ถ้าต้องการ)
-              price: item.price ? item.price : undefined,
+              maDrugId: createdHeader.id,
+              drugId: item.drugId,
+              quantity: item.quantity,
+              price: item.price,
+              expiryDate: item.expiryDate || null,
             },
           });
         }
       }
 
-      return created; // ส่งค่ากลับออกมาจาก Transaction
+      return await tx.maDrug.findUnique({
+        where: { id: createdHeader.id },
+        include: { maDrugItems: true },
+      });
     });
 
-    // ---------------------------------------------------------
-    // ส่วนที่ 2: Notification (อยู่นอก Transaction)
-    // ---------------------------------------------------------
     try {
       const admins = await this.prisma.user.findMany({
         where: { role: 'admin' },
@@ -90,13 +89,13 @@ export class MaDrugService {
       if (adminIds.length > 0) {
         await this.notiService.createNotification({
           userId: adminIds,
-          menuKey: 'manageDrug', // เมนู Admin
+          menuKey: 'manageDrug',
           title: '💊 มีการเบิกยารายการใหม่',
           message: `ใบเบิกเลขที่: ${
-            newMaDrug.requestNumber || '-'
+            newMaDrug?.requestNumber || '-'
           } (รอตรวจสอบ)`,
           type: 'info',
-          meta: { documentId: newMaDrug.id },
+          meta: { documentId: newMaDrug?.id },
         });
       }
     } catch (error) {
@@ -119,13 +118,13 @@ export class MaDrugService {
       typeof data.status === 'string' &&
       data.status !== oldData?.status
     ) {
-      this.handleStatusNotification(updatedResult, data.status as string);
+      await this.handleStatusNotification(updatedResult, data.status as string);
     }
 
     return updatedResult;
   }
 
-  // ✅ 3. Delete: เคลียร์แจ้งเตือน
+  // ✅ 3. Delete: เคลียร์แจ้งเตือนและลบบิล
   async delete(id: number) {
     try {
       const notificationsToCheck = await this.prisma.notification.findMany({
@@ -150,102 +149,53 @@ export class MaDrugService {
     return await this.maDrugRepo.delete(id);
   }
 
-  // ✅ 4. Receive: รับยา (Completed) -> แจ้ง Admin
+  // ✅ 4. Receive: รับยาเข้าคลัง (การบวกสต็อกและการสร้าง Lot อยู่ที่ไฟล์ Repo 100%)
   async receiveMaDrug(id: number, payload: any) {
     const result = await this.maDrugRepo.receiveMaDrugWithTransaction(
       id,
       payload,
     );
-    // แจ้งเตือน Admin ว่ารับยาแล้ว
-    this.handleStatusNotification(result, 'completed');
+    await this.handleStatusNotification(result, 'completed');
     return result;
   }
 
-  // ✅ 5. Edit: แก้ไขสถานะ
-  async editMaDrug(id: number, payload: any) {
-    const updateData = { ...payload };
-    delete updateData.id;
-
-    const oldData = await this.maDrugRepo.findOne(id);
-    const result = await this.maDrugRepo.edit(id, updateData);
-
-    if (payload.status && payload.status !== oldData?.status) {
-      this.handleStatusNotification(result, payload.status);
-    }
-
-    return result;
-  }
-
-  // ✅ 6. Helper Function: แยกการแจ้งเตือนตาม Role
+  // =================================================================================
+  // 🔔 Helper Function: แจ้งเตือน
+  // =================================================================================
   private async handleStatusNotification(requestData: any, newStatus: string) {
     try {
-      const requesterId = (requestData as any).createdById;
       const requestId = requestData.id;
       const reqNo = requestData.requestNumber || '-';
       const requesterName = requestData.createdName || 'ห้องยา';
 
-      // =========================================================
-      // กลุ่มที่ 1: Approved / Cancel -> แจ้ง PHARMACY (User)
-      // =========================================================
-      if (['approved', 'cancel'].includes(newStatus)) {
-        let title = '';
-        let message = '';
-        let type = 'info';
+      const creatorUserId = requestData.createdById;
 
-        switch (newStatus) {
-          case 'approved':
-            title = '✅ ใบเบิกยาอนุมัติแล้ว';
-            message = `ใบเบิกเลขที่ ${reqNo} อนุมัติแล้ว (เตรียมรับยา)`;
-            type = 'success';
-            break;
-          case 'cancel':
-            title = '❌ ใบเบิกยาถูกยกเลิก';
-            message = `ใบเบิกเลขที่ ${reqNo} ถูกยกเลิก`;
-            type = 'error';
-            break;
-        }
+      if (['approve', 'approved', 'cancel'].includes(newStatus)) {
+        if (!creatorUserId) return;
 
-        // กรณีที่ 1: แจ้งเตือนหาคนสร้าง (ถ้ามี ID)
-        if (requesterId) {
-          await this.notiService.clearOpenNotifications(
-            String(requesterId),
-            'maDrug',
-            requestId,
-          );
-          await this.notiService.createNotification({
-            userId: requesterId,
-            menuKey: 'maDrug', // เมนู Pharmacy
-            title,
-            message,
-            type,
-            meta: { documentId: requestId },
-          });
-        }
-        // กรณีที่ 2: ถ้าไม่มี ID คนสร้าง ให้แจ้งเตือนหา Role 'pharmacy' ทุกคน
-        else {
-          const pharmacies = await this.prisma.user.findMany({
-            where: { role: 'pharmacy' },
-            select: { userId: true },
-          });
-          const pharmacyIds = pharmacies.map((u) => u.userId);
+        const isApprove = newStatus === 'approve' || newStatus === 'approved';
+        const title = isApprove
+          ? '✅ ใบเบิกยาอนุมัติแล้ว'
+          : '❌ ใบเบิกยาถูกยกเลิก';
+        const message = isApprove
+          ? `ใบเบิกเลขที่ ${reqNo} อนุมัติแล้ว (เตรียมรับยา)`
+          : `ใบเบิกเลขที่ ${reqNo} ถูกยกเลิก`;
+        const type = isApprove ? 'success' : 'error';
 
-          if (pharmacyIds.length > 0) {
-            await this.notiService.createNotification({
-              userId: pharmacyIds,
-              menuKey: 'maDrug',
-              title,
-              message,
-              type,
-              meta: { documentId: requestId },
-            });
-          }
-        }
-      }
-
-      // =========================================================
-      // กลุ่มที่ 2: Completed / Pending -> แจ้ง ADMIN
-      // =========================================================
-      else if (['completed', 'pending'].includes(newStatus)) {
+        await this.notiService.clearOpenNotifications(
+          creatorUserId,
+          'maDrug',
+          requestId,
+        );
+        await this.notiService.createNotification({
+          userId: creatorUserId,
+          menuKey: 'maDrug',
+          title,
+          message,
+          type,
+          meta: { documentId: requestId },
+        });
+      } else if (['completed', 'pending'].includes(newStatus)) {
         const admins = await this.prisma.user.findMany({
           where: { role: 'admin' },
           select: { userId: true },
@@ -253,23 +203,19 @@ export class MaDrugService {
         const adminIds = admins.map((u) => u.userId);
 
         if (adminIds.length > 0) {
-          let title = '';
-          let message = '';
-          let type = 'info';
-
-          if (newStatus === 'completed') {
-            title = '✨ ยืนยันการรับยาแล้ว';
-            message = `ใบเบิกเลขที่ ${reqNo} ได้รับยาเรียบร้อยแล้ว (ปิดงาน)`;
-            type = 'success';
-          } else if (newStatus === 'pending') {
-            title = '📝 มีการแก้ไขใบเบิกยา';
-            message = `ใบเบิกเลขที่ ${reqNo} โดย ${requesterName} มีการแก้ไขข้อมูล`;
-            type = 'info';
-          }
+          const title =
+            newStatus === 'completed'
+              ? '✨ ยืนยันการรับยาแล้ว'
+              : '📝 มีการแก้ไขใบเบิกยา';
+          const message =
+            newStatus === 'completed'
+              ? `ใบเบิกเลขที่ ${reqNo} ได้รับยาเรียบร้อยแล้ว (ปิดงาน)`
+              : `ใบเบิกเลขที่ ${reqNo} โดยคุณ ${requesterName} มีการแก้ไขข้อมูล รอตรวจสอบ`;
+          const type = newStatus === 'completed' ? 'success' : 'info';
 
           await this.notiService.createNotification({
             userId: adminIds,
-            menuKey: 'manageDrug', // เมนู Admin
+            menuKey: 'manageDrug',
             title,
             message,
             type,

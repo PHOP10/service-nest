@@ -43,101 +43,53 @@ export class DispenseService {
     });
   }
 
-  // ✅ 1. Create (Pending): สร้างใบจ่ายยา + ตัดสต็อก FEFO -> แจ้ง Admin
+  // 🟢 1. Create (Pending): สร้างใบจ่ายยาเท่านั้น (⛔ ยังไม่ตัดสต็อกที่นี่) -> แจ้ง Admin
   async create(data: Prisma.DispenseCreateInput) {
-    // ---------------------------------------------------------
-    // ส่วนที่ 1: Transaction (บันทึกข้อมูล + ตัดสต็อก FEFO)
-    // ---------------------------------------------------------
-    // ⚠️ แก้ไข: เอาผลลัพธ์ใส่ตัวแปร result ก่อน อย่าเพิ่ง return
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1.1 สร้างใบจ่ายยา (Header)
+      // 1. สร้างแค่ Header ของใบจ่ายยา
       const newDispense = await tx.dispense.create({
         data: {
           ...data,
-          dispenseItems: undefined, // เราจะสร้าง Item เองข้างล่าง
+          dispenseItems: undefined, // เราจะแยกสร้าง Items ด้านล่าง
         },
       });
 
-      // ดึงรายการยาที่ส่งมาจาก Frontend
+      // 2. ดึงข้อมูล Items
       const itemsInput = (data.dispenseItems as any)?.create || [];
 
-      // 1.2 วนลูปตัดสต็อกทีละรายการ
+      // 3. วนลูปเช็คว่าของพอไหม และบันทึกแค่ประวัติ (แต่ยังไม่หักสต็อก)
       for (const itemInput of itemsInput) {
         const drugId = itemInput.drugId;
-        let qtyNeeded = itemInput.quantity;
+        const qtyNeeded = itemInput.quantity;
         const price = itemInput.price;
 
-        // A. เช็คยอดรวมก่อนว่าพอไหม (Master Stock)
+        // เช็คว่ายาใน Master มีพอให้จองไหม (ถ้าไม่พอก็บล็อกเลย)
         const drugMaster = await tx.drug.findUnique({ where: { id: drugId } });
         if (!drugMaster || drugMaster.quantity < qtyNeeded) {
           throw new ConflictException(
-            `ยา ${drugMaster?.name || drugId} มีของไม่พอ (ขาด ${
-              qtyNeeded - (drugMaster?.quantity || 0)
+            `ยา ${drugMaster?.name || drugId} มีของไม่พอ (เหลือแค่ ${
+              drugMaster?.quantity || 0
             })`,
           );
         }
 
-        // B. ดึง Lot ที่มีของ โดยเรียงตามวันหมดอายุ (FEFO Logic) 🟢
-        const lots = await tx.drugLot.findMany({
-          where: {
-            drugId: drugId,
-            quantity: { gt: 0 }, // เอาเฉพาะที่มีของ
-            isActive: true,
-          },
-          orderBy: { expiryDate: 'asc' }, // เรียงวันหมดอายุ น้อย -> มาก
-        });
+        // ⛔ ลบโค้ดตัดสต็อก FEFO และ ลบโค้ดหัก Master Drug ออกจากตรงนี้ทั้งหมด ⛔
 
-        let currentLotIndex = 0;
-
-        // C. ตัดสต็อกตาม Lot
-        while (qtyNeeded > 0) {
-          if (currentLotIndex >= lots.length) {
-            // กรณี Data Inconsistency (Master บอกมี แต่ Lot ไม่มี)
-            throw new ConflictException(
-              `ยา ${drugMaster.name} ข้อมูลสต็อก Lot ไม่ถูกต้อง (หาย)`,
-            );
-          }
-
-          const lot = lots[currentLotIndex];
-          const deductAmount = Math.min(lot.quantity, qtyNeeded); // ตัดเท่าที่มี หรือเท่าที่ต้องการ
-
-          // อัปเดต Lot
-          await tx.drugLot.update({
-            where: { id: lot.id },
-            data: {
-              quantity: { decrement: deductAmount },
-              // ถ้าหมดเกลี้ยง ปิด Active ไปเลยก็ได้
-              isActive: lot.quantity - deductAmount > 0,
-            },
-          });
-
-          qtyNeeded -= deductAmount;
-          currentLotIndex++;
-        }
-
-        // D. สร้าง DispenseItem บันทึกประวัติ
+        // บันทึกรายการ DispenseItem ไว้เฉยๆ รอแอดมินมายืนยัน
         await tx.dispenseItem.create({
           data: {
             dispenseId: newDispense.id,
             drugId: drugId,
-            quantity: itemInput.quantity,
-            price: price, // ราคาขาย
+            quantity: qtyNeeded,
+            price: price,
           },
-        });
-
-        // E. อัปเดตยอดรวม Master Drug
-        await tx.drug.update({
-          where: { id: drugId },
-          data: { quantity: { decrement: itemInput.quantity } },
         });
       }
 
       return newDispense;
     });
 
-    // ---------------------------------------------------------
-    // ส่วนที่ 2: Notification (แจ้งเตือนหลังจาก Transaction สำเร็จ)
-    // ---------------------------------------------------------
+    // 4. ส่งแจ้งเตือนหาแอดมิน
     try {
       const admins = await this.prisma.user.findMany({
         where: { role: 'admin' },
@@ -148,7 +100,7 @@ export class DispenseService {
       if (adminIds.length > 0) {
         await this.notiService.createNotification({
           userId: adminIds,
-          menuKey: 'manageDrug', // 🔔 เมนู Admin
+          menuKey: 'manageDrug',
           title: '💊 มีรายการจ่ายยาใหม่',
           message: `รายการ ID: ${result.id} (รอตรวจสอบ)`,
           type: 'info',
@@ -159,7 +111,6 @@ export class DispenseService {
       this.logger.error('Failed to send notification on create', error);
     }
 
-    // ✅ ค่อย return ผลลัพธ์กลับไป
     return result;
   }
 
@@ -176,7 +127,7 @@ export class DispenseService {
       typeof data.status === 'string' &&
       data.status !== oldData?.status
     ) {
-      this.handleStatusNotification(updatedResult, data.status as string);
+      await this.handleStatusNotification(updatedResult, data.status as string);
     }
 
     return updatedResult;
@@ -191,7 +142,7 @@ export class DispenseService {
     const result = await this.dispenseRepo.edit(id, updateData);
 
     if (payload.status && payload.status !== oldData?.status) {
-      this.handleStatusNotification(result, payload.status);
+      await this.handleStatusNotification(result, payload.status);
     }
 
     return result;
@@ -222,60 +173,57 @@ export class DispenseService {
     return await this.dispenseRepo.delete(id);
   }
 
-  // ✅ 5. Execute: ดำเนินการจ่ายยา (Completed)
+  // ✅ 5. Execute: ดำเนินการจ่ายยา และตัดสต็อกจริงๆ ตรงนี้ (Completed)
   async execute(id: number, payload: any) {
+    // โยนไปให้ dispense.repo เป็นคนจัดการตัดสต็อกและบันทึกข้อมูล
     const result = await this.dispenseRepo.executeDispense(id, payload);
-    this.handleStatusNotification(result, 'completed');
+
+    // พอตัดสต็อกเสร็จก็ส่งแจ้งเตือน
+    await this.handleStatusNotification(result, 'completed');
+
     return result;
   }
 
-  // ✅ 6. Helper Function: แยกการแจ้งเตือนตาม Role
-  private async handleStatusNotification(dispenseData: any, newStatus: string) {
+  // =================================================================================
+  // 🔔 6. Helper Function: แยกการแจ้งเตือน
+  // =================================================================================
+  private async handleStatusNotification(requestData: any, newStatus: string) {
     try {
-      const dispenseId = dispenseData.id;
-      const dispenserName = dispenseData.dispenserName || 'เจ้าหน้าที่';
+      const requestId = requestData.id;
+      // ⚠️ แก้ชื่อตัวแปรให้ตรงกับ Model Dispense
+      const reqNo = requestData.id || '-';
+      const requesterName = requestData.dispenserName || 'เจ้าหน้าที่';
+      const creatorUserId = requestData.createdById;
 
-      // =========================================================
-      // กลุ่มที่ 1: Approved / Canceled -> แจ้ง PHARMACY
-      // =========================================================
-      if (['approved', 'canceled'].includes(newStatus)) {
-        let title = '';
-        let message = '';
-        let type = 'info';
+      // 🟢 1. อนุมัติ / ยกเลิก -> แจ้งเตือนไปยัง "ผู้เบิกยา" คนเดียวเท่านั้น
+      if (['approve', 'approved', 'cancel'].includes(newStatus)) {
+        if (!creatorUserId) return;
 
-        switch (newStatus) {
-          case 'approved':
-            title = '✅ รายการจ่ายยาอนุมัติแล้ว';
-            message = `รายการ ID: ${dispenseId} อนุมัติแล้ว พร้อมดำเนินการ`;
-            type = 'success';
-            break;
-          case 'canceled':
-            title = '❌ รายการจ่ายยาถูกยกเลิก';
-            message = `รายการ ID: ${dispenseId} ถูกยกเลิก`;
-            type = 'error';
-            break;
-        }
+        const isApprove = newStatus === 'approve' || newStatus === 'approved';
+        const title = isApprove
+          ? '✅ ใบเบิกยาอนุมัติแล้ว'
+          : '❌ ใบเบิกยาถูกยกเลิก';
+        const message = isApprove
+          ? `รายการ ID: ${reqNo} อนุมัติแล้ว (เตรียมรับยา)`
+          : `รายการ ID: ${reqNo} ถูกยกเลิก`;
+        const type = isApprove ? 'success' : 'error';
 
-        const pharmacies = await this.prisma.user.findMany({
-          where: { role: 'pharmacy' },
-          select: { userId: true },
+        await this.notiService.clearOpenNotifications(
+          creatorUserId,
+          'maDrug',
+          requestId,
+        );
+        await this.notiService.createNotification({
+          userId: creatorUserId,
+          menuKey: 'maDrug',
+          title,
+          message,
+          type,
+          meta: { documentId: requestId },
         });
-        const pharmacyIds = pharmacies.map((u) => u.userId);
-
-        if (pharmacyIds.length > 0) {
-          await this.notiService.createNotification({
-            userId: pharmacyIds,
-            menuKey: 'maDrug',
-            title,
-            message,
-            type,
-            meta: { documentId: dispenseId },
-          });
-        }
       }
-      // =========================================================
-      // กลุ่มที่ 2: Completed / Pending -> แจ้ง ADMIN
-      // =========================================================
+
+      // 🟢 2. รับยาเข้าคลัง (completed) และ แก้ไข (pending) -> แจ้งเตือนแอดมินอย่างเดียว
       else if (['completed', 'pending'].includes(newStatus)) {
         const admins = await this.prisma.user.findMany({
           where: { role: 'admin' },
@@ -284,19 +232,15 @@ export class DispenseService {
         const adminIds = admins.map((u) => u.userId);
 
         if (adminIds.length > 0) {
-          let title = '';
-          let message = '';
-          let type = 'info';
-
-          if (newStatus === 'completed') {
-            title = '✨ จ่ายยาสำเร็จ';
-            message = `รายการ ID: ${dispenseId} ดำเนินการเรียบร้อยแล้ว (ปิดงาน)`;
-            type = 'success';
-          } else if (newStatus === 'pending') {
-            title = '📝 มีการแก้ไขรายการจ่ายยา';
-            message = `รายการ ID: ${dispenseId} โดย ${dispenserName} มีการแก้ไขข้อมูล`;
-            type = 'info';
-          }
+          const title =
+            newStatus === 'completed'
+              ? '✨ ยืนยันการรับยาแล้ว'
+              : '📝 มีการแก้ไขใบเบิกยา';
+          const message =
+            newStatus === 'completed'
+              ? `รายการ ID: ${reqNo} ได้รับยาเรียบร้อยแล้ว (ปิดงาน)`
+              : `รายการ ID: ${reqNo} โดยคุณ ${requesterName} มีการแก้ไขข้อมูล รอตรวจสอบ`;
+          const type = newStatus === 'completed' ? 'success' : 'info';
 
           await this.notiService.createNotification({
             userId: adminIds,
@@ -304,7 +248,7 @@ export class DispenseService {
             title,
             message,
             type,
-            meta: { documentId: dispenseId },
+            meta: { documentId: requestId },
           });
         }
       }
