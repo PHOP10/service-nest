@@ -8,7 +8,9 @@ export class MasterLeaveService {
   private logger = new Logger('MasterLeaveService');
 
   async findAll() {
-    return await this.masterLeaveRepo.findAll();
+    return await this.masterLeaveRepo.findMany({
+      orderBy: { id: 'asc' },
+    });
   }
 
   async findOne(id: number) {

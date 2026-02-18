@@ -9,7 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { comparePassoword, hashPassword } from '../utils/auth-helper';
+import { comparePassword, hashPassword } from '../utils/auth-helper';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { jwtConfig } from 'src/auth/config';
@@ -39,13 +39,18 @@ export class AuthController {
 
     const user = await this.userService.findByUsername(username);
     if (!user) {
-      throw new NotFoundException('not found user');
+      // ✅ ส่งภาษาไทยไปเลย
+      throw new NotFoundException('ไม่พบชื่อผู้ใช้งานนี้ในระบบ');
     }
-    const comparePassowrd = await comparePassoword(password, user.password);
 
-    if (!comparePassowrd) {
-      throw new UnauthorizedException('password is incorrect');
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      // ✅ ส่งภาษาไทยไปเลย
+      throw new UnauthorizedException(
+        'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง',
+      );
     }
+
     const { userId, firstName, lastName, email, role } = user;
 
     const payload = {
@@ -89,7 +94,7 @@ export class AuthController {
     if (!findUser) {
       throw new NotFoundException('not found user');
     }
-    const comparePassowrd = await comparePassoword(password, findUser.password);
+    const comparePassowrd = await comparePassword(password, findUser.password);
     if (!comparePassowrd) {
       throw new UnauthorizedException('password is incorrect');
     }
@@ -124,13 +129,18 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Post('/reset-password')
   async resetPassword(@Body() body, @Req() req) {
-    // const { user } = req;
-    const { username, password } = body;
-    const findUser = await this.userService.findByUsername(username);
+    const { user } = req; // 1. เอา comment ออกเพื่อใช้งาน req
+    const { password } = body; // 2. รับแค่ password ใหม่จาก body
+
+    // 3. ค้นหาผู้ใช้จาก ID ที่อยู่ใน Token (ปลอดภัยกว่า)
+    const findUser = await this.userService.findByUserId(user.userId);
+
     if (!findUser) {
       throw new NotFoundException('not found user');
     }
+
     const { userId, firstName, lastName, email, role } = findUser;
+    const username = findUser.username; // ดึง username จากฐานข้อมูลมาใส่ payload แทน
 
     const payload = {
       userId,
@@ -139,10 +149,12 @@ export class AuthController {
       email,
       role,
     };
+
     const passwordHash = await hashPassword(password);
     await this.userService.update(findUser.userId, {
       password: passwordHash,
     });
+
     return { ...payload };
   }
 
