@@ -28,7 +28,7 @@ export class MaMedicalEquipmentService {
     return await this.maMedicalEquipmentRepo.findOne(id);
   }
 
-  // ✅ 1. Create: แจ้ง Admin
+  // ✅ 1. Create: แจ้ง Admin (เอา asset ออกแล้ว)
   async create(data: any) {
     const newRequest = await this.maMedicalEquipmentRepo.create({
       sentDate: new Date(data.sentDate),
@@ -46,8 +46,9 @@ export class MaMedicalEquipmentService {
     });
 
     try {
+      // 🎯 ดึงแค่ Admin อย่างเดียว ไม่เอา asset
       const approvers = await this.prisma.user.findMany({
-        where: { role: { in: ['admin', 'asset'] } },
+        where: { role: 'admin' },
         select: { userId: true },
       });
       const approverIds = approvers.map((u) => u.userId);
@@ -90,19 +91,28 @@ export class MaMedicalEquipmentService {
     });
 
     try {
-      // เคลียร์ Noti เก่า User
       const requestData = await this.maMedicalEquipmentRepo.findOne(id);
       if (requestData?.createdById) {
+        let targetUserUuid = String(requestData.createdById);
+
+        if (targetUserUuid.length <= 20) {
+          const user = await this.prisma.user.findUnique({
+            where: { id: Number(targetUserUuid) },
+            select: { userId: true },
+          });
+          if (user) targetUserUuid = user.userId;
+        }
+
         await this.notiService.clearOpenNotifications(
-          String(requestData.createdById),
+          targetUserUuid,
           'medicalEquipment', // 🔔 Key User
           id,
         );
       }
 
-      // แจ้ง Admin
+      // 🎯 ดึงแค่ Admin อย่างเดียว ไม่เอา asset
       const approvers = await this.prisma.user.findMany({
-        where: { role: { in: ['admin', 'asset'] } },
+        where: { role: 'admin' },
         select: { userId: true },
       });
       const approverIds = approvers.map((u) => u.userId);
@@ -128,7 +138,7 @@ export class MaMedicalEquipmentService {
   async update(
     id: number,
     data: Prisma.MaMedicalEquipmentUpdateInput,
-    actorId?: string, // 👈 รับค่าคนทำรายการมาด้วย
+    actorId?: string,
   ) {
     const oldData = await this.maMedicalEquipmentRepo.findOne(id);
     if (!oldData) throw new Error('Record not found');
@@ -184,35 +194,31 @@ export class MaMedicalEquipmentService {
     actorId?: string,
   ) {
     try {
-      // ⚠️ จุดสำคัญ: requestData.createdById อาจจะเป็น Int
       const rawRequesterId = requestData.createdById;
       const requestId = requestData.id;
       const returnerName = requestData.returnName || 'เจ้าหน้าที่';
 
-      // 🔍 ค้นหา User ตัวจริงเพื่อเอา UUID (userId) ที่ถูกต้อง
       let targetUserUuid: string | null = null;
-
       if (rawRequesterId) {
-        // ลองเช็คว่าเป็น UUID หรือไม่ (ถ้าสั้นๆ หรือเป็นตัวเลข น่าจะเป็น Int ID)
         const isUuid = String(rawRequesterId).length > 20;
-
         if (isUuid) {
           targetUserUuid = String(rawRequesterId);
         } else {
-          // กรณีเป็น Int ให้ไปค้นหาใน DB
           const user = await this.prisma.user.findUnique({
-            where: { id: Number(rawRequesterId) }, // ค้นด้วย Int id
-            select: { userId: true }, // ขอ UUID ออกมา
+            where: { id: Number(rawRequesterId) },
+            select: { userId: true },
           });
           targetUserUuid = user?.userId || null;
         }
       }
 
+      const isSelfAction =
+        actorId && String(actorId) === String(targetUserUuid);
+
       // =========================================================
       // กลุ่มที่ 1: แจ้งเตือน User (Approve, Cancel, Verified)
       // =========================================================
       if (['approve', 'cancel', 'verified'].includes(newStatus)) {
-        // ... (title/message logic เหมือนเดิม) ...
         let title = '';
         let message = '';
         let type = 'info';
@@ -235,15 +241,14 @@ export class MaMedicalEquipmentService {
             break;
         }
 
-        // ✅ ใช้ targetUserUuid (UUID) แทน ID เดิม
-        if (targetUserUuid) {
+        if (targetUserUuid && !isSelfAction) {
           await this.notiService.clearOpenNotifications(
-            targetUserUuid, // ใช้ UUID
+            targetUserUuid,
             'medicalEquipment',
             requestId,
           );
           await this.notiService.createNotification({
-            userId: targetUserUuid, // ใช้ UUID ที่ถูกต้อง (DB จะไม่ Error แล้ว)
+            userId: targetUserUuid,
             menuKey: 'medicalEquipment',
             title,
             message,
@@ -257,9 +262,9 @@ export class MaMedicalEquipmentService {
       // กลุ่มที่ 2: สถานะ RETURN
       // =========================================================
       else if (newStatus === 'return') {
-        // ... (Logic แจ้ง Admin เหมือนเดิม เพราะ Admin ดึงจาก Role ได้ UUID ถูกอยู่แล้ว) ...
+        // 🎯 ดึงแค่ Admin อย่างเดียว ไม่เอา asset
         const approvers = await this.prisma.user.findMany({
-          where: { role: { in: ['admin', 'asset'] } },
+          where: { role: 'admin' },
           select: { userId: true },
         });
         const adminIds = approvers.map((u) => u.userId);
@@ -275,29 +280,20 @@ export class MaMedicalEquipmentService {
           });
         }
 
-        // แจ้ง User เจ้าของเรื่อง (ถ้าคนอื่นรับแทน)
-        if (targetUserUuid) {
-          // เช็ค actorId (ถ้ามี) กับ UUID
-          // ต้องระวัง: actorId ที่ส่งมาจาก Frontend เป็น UUID หรือ Int?
-          // ปกติ session.user.id ใน frontend มักจะเป็น UUID ถ้าใช้ NextAuth
-          const isSelfAction =
-            actorId && String(actorId) === String(targetUserUuid);
-
-          if (!isSelfAction) {
-            await this.notiService.clearOpenNotifications(
-              targetUserUuid,
-              'medicalEquipment',
-              requestId,
-            );
-            await this.notiService.createNotification({
-              userId: targetUserUuid, // ใช้ UUID
-              menuKey: 'medicalEquipment',
-              title: '📦 เครื่องมือถูกรับคืนแล้ว',
-              message: `รายการนี้ถูกรับคืนไปแล้ว โดยคุณ "${returnerName}"`,
-              type: 'info',
-              meta: { documentId: requestId },
-            });
-          }
+        if (targetUserUuid && !isSelfAction) {
+          await this.notiService.clearOpenNotifications(
+            targetUserUuid,
+            'medicalEquipment',
+            requestId,
+          );
+          await this.notiService.createNotification({
+            userId: targetUserUuid,
+            menuKey: 'medicalEquipment',
+            title: '📦 เครื่องมือถูกรับคืนแล้ว',
+            message: `รายการนี้ถูกรับคืนไปแล้ว โดยคุณ "${returnerName}"`,
+            type: 'info',
+            meta: { documentId: requestId },
+          });
         }
       }
     } catch (error) {

@@ -113,7 +113,7 @@ model MasterCar {
 
 model DataLeave {
   id             Int         @id @default(autoincrement()) @map("id")
-  reason         String      @map("reason")
+  reason         String?     @map("reason")
   dateStart      DateTime    @map("date_start") @db.Timestamptz(6)
   dateEnd        DateTime    @map("date_end") @db.Timestamptz(6)
   status         String      @default("pending") @map("status")
