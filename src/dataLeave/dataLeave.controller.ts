@@ -17,7 +17,7 @@ import { extname, join } from 'path';
 import { DataLeaveService } from './dataLeave.service';
 import { Prisma } from '@prisma/client';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
-import { File } from 'multer';
+// import { File } from 'multer';
 import { BadRequestException } from '@nestjs/common';
 
 @Controller('dataLeave')
@@ -90,7 +90,7 @@ export class DataLeaveController {
       },
     }),
   )
-  uploadFile(@UploadedFile() file: File) {
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       this.logger.error('No file uploaded');
       return {

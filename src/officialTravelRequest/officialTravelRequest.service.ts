@@ -117,108 +117,109 @@ export class OfficialTravelRequestService {
 
   // ✅ 4. Helper Function: จัดการแจ้งเตือนตามสถานะ (รวมผู้โดยสาร)
   private async handleStatusNotification(requestData: any, newStatus: string) {
-    try {
-      const requesterId = requestData.createdById;
-      const requestId = requestData.id;
-      const docNo = requestData.documentNo || '-';
-      const titleName = requestData.title || 'ไม่ระบุ';
+    const requesterId = requestData.createdById;
+    const requestId = requestData.id;
+    const docNo = requestData.documentNo || '-';
+    const titleName = requestData.title || 'ไม่ระบุ';
 
-      // =========================================================
-      // กลุ่มที่ 1: แจ้งเตือน User + ผู้ร่วมเดินทาง (Approve, Edit, Cancel)
-      // =========================================================
-      if (['approve', 'edit', 'cancel'].includes(newStatus)) {
-        let title = '';
-        let message = '';
-        let type = 'info';
+    // =========================================================
+    // กลุ่มที่ 1: แจ้งเตือน User + ผู้ร่วมเดินทาง (Approve, Edit, Cancel)
+    // =========================================================
+    if (['approve', 'edit', 'cancel'].includes(newStatus)) {
+      let title = '';
+      let message = '';
+      let type = 'info';
 
-        switch (newStatus) {
-          case 'approve': // สีเขียว
-            title = '✅ อนุมัติการไปราชการ';
-            message = `เรื่อง "${titleName}" (${docNo}) ได้รับการอนุมัติแล้ว`;
-            type = 'success';
-            break;
+      switch (newStatus) {
+        case 'approve': // สีเขียว
+          title = '✅ อนุมัติการไปราชการ';
+          message = `เรื่อง "${titleName}" (${docNo}) ได้รับการอนุมัติแล้ว`;
+          type = 'success';
+          break;
 
-          case 'edit': // สีส้ม
-            title = '⚠️ แจ้งแก้ไขข้อมูลไปราชการ';
-            message = `เรื่อง "${titleName}" ต้องการข้อมูลเพิ่มเติม (โปรดตรวจสอบ)`;
-            type = 'warning';
-            break;
+        case 'edit': // สีส้ม
+          title = '⚠️ แจ้งแก้ไขข้อมูลไปราชการ';
+          message = `เรื่อง "${titleName}" ต้องการข้อมูลเพิ่มเติม (โปรดตรวจสอบ)`;
+          type = 'warning';
+          break;
 
-          case 'cancel': // สีแดง
-            title = '❌ ยกเลิกการไปราชการ';
-            message = `เรื่อง "${titleName}" ถูกยกเลิก`;
-            type = 'error';
-            break;
-        }
+        case 'cancel': // สีแดง
+          title = '❌ ยกเลิกการไปราชการ';
+          message = `เรื่อง "${titleName}" ถูกยกเลิก`;
+          type = 'error';
+          break;
+      }
 
-        // ⭐ รวมรายชื่อคนที่จะได้รับแจ้งเตือน (คนจอง + ผู้โดยสาร)
-        const recipients = new Set<string>();
+      // ⭐ รวมรายชื่อคนที่จะได้รับแจ้งเตือน (คนจอง + ผู้โดยสาร)
+      const recipients = new Set<string>();
 
-        // 1. ใส่คนจอง (Requester)
-        if (requesterId) {
-          recipients.add(requesterId);
-        }
+      if (requesterId) recipients.add(requesterId);
 
-        // 2. ใส่ผู้โดยสาร (Passenger) - เช็คจาก passengerNames ที่เป็น Array ของ UserID
-        if (
-          requestData.passengerNames &&
-          Array.isArray(requestData.passengerNames)
-        ) {
-          requestData.passengerNames.forEach((uid: string) => {
-            if (typeof uid === 'string' && uid.length > 5) {
-              recipients.add(uid);
-            }
-          });
-        }
+      if (
+        requestData.passengerNames &&
+        Array.isArray(requestData.passengerNames)
+      ) {
+        requestData.passengerNames.forEach((uid: string) => {
+          if (typeof uid === 'string' && uid.length > 5) {
+            recipients.add(uid);
+          }
+        });
+      }
 
-        // ⭐ วนลูปส่งให้ทุกคนใน Set
-        for (const uid of recipients) {
-          // 1. เคลียร์เลขแจ้งเตือนเก่าทิ้งก่อน
+      // ⭐ วนลูปส่งให้ทุกคนใน Set แบบ Promise.all เพื่อความไว
+      await Promise.all(
+        Array.from(recipients).map(async (uid) => {
           await this.notiService.clearOpenNotifications(
             String(uid),
             'officialTravelRequest', // 🔔 แจ้งเมนู User
             requestId,
           );
 
-          // 2. สร้างแจ้งเตือนใหม่
-          await this.notiService.createNotification({
+          return this.notiService.createNotification({
             userId: uid,
             menuKey: 'officialTravelRequest',
             title,
             message,
-            type,
+            type: type as any,
             meta: { documentId: requestId },
           });
-        }
-      }
+        }),
+      );
+    }
 
-      // =========================================================
-      // กลุ่มที่ 2: แจ้งเตือน Admin (Pending)
-      // (กรณี User แก้ไขข้อมูลส่งกลับมาใหม่)
-      // =========================================================
-      else if (newStatus === 'pending') {
-        const approvers = await this.prisma.user.findMany({
-          where: { role: 'admin' },
-          select: { userId: true },
-        });
-        const adminIds = approvers.map((u) => u.userId);
+    // =========================================================
+    // กลุ่มที่ 2: แจ้งเตือน Admin (Pending, Resubmitted)
+    // =========================================================
+    else if (['pending', 'resubmitted'].includes(newStatus)) {
+      const approvers = await this.prisma.user.findMany({
+        where: { role: 'admin' },
+        select: { userId: true },
+      });
+      const adminIds = approvers.map((u) => u.userId);
 
-        if (adminIds.length > 0) {
-          // แจ้ง Admin ว่ามีการแก้ไขส่งมาใหม่
-          await this.notiService.createNotification({
-            userId: adminIds,
-            menuKey: 'manageOfficialTravelRequest', // 🔔 แจ้งเมนูจัดการ
-            title: '📝 มีการแก้ไขคำขอไปราชการ',
-            message: `ผู้ขอ ${
+      if (adminIds.length > 0) {
+        // 🎯 แยกข้อความระหว่าง pending กับ resubmitted
+        const isResubmitted = newStatus === 'resubmitted';
+        const title = isResubmitted
+          ? '🔄 แก้ไขใบขอไปราชการเรียบร้อย'
+          : '📝 มีการแก้ไขคำขอไปราชการ';
+        const message = isResubmitted
+          ? `ผู้ขอ ${
               requestData.createdName || '-'
-            } ได้แก้ไขข้อมูล (รอตรวจสอบ)`,
-            type: 'info',
-            meta: { documentId: requestId },
-          });
-        }
+            } ได้แก้ไขใบขอไปราชการตามที่ร้องขอแล้ว (รอตรวจใหม่)`
+          : `ผู้ขอ ${
+              requestData.createdName || '-'
+            } ได้แก้ไขข้อมูล (รอตรวจสอบ)`;
+
+        await this.notiService.createNotification({
+          userId: adminIds,
+          menuKey: 'manageOfficialTravelRequest', // 🔔 แจ้งเมนูจัดการ
+          title,
+          message,
+          type: 'info',
+          meta: { documentId: requestId },
+        });
       }
-    } catch (error) {
-      this.logger.error('Failed to handle status notification', error);
     }
   }
 

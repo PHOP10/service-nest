@@ -14,7 +14,11 @@ export class MasterDrugService {
   private logger = new Logger('MasterDrugService');
 
   async findAll() {
-    return await this.masterDrugRepo.findAll();
+    return await this.masterDrugRepo.findMany({
+      orderBy: {
+        drugTypeId: 'asc',
+      },
+    });
   }
 
   async findOne(id: number) {

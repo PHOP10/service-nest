@@ -178,7 +178,7 @@ export class DataLeaveService {
     }
 
     // กรณี: แก้กลับมาเป็น Pending -> แจ้ง Admin
-    else if (newStatus === 'pending') {
+    else if (['pending', 'resubmitted'].includes(newStatus)) {
       const approvers = await this.prisma.user.findMany({
         where: { role: 'admin' },
         select: { userId: true },
@@ -186,11 +186,19 @@ export class DataLeaveService {
       const adminIds = approvers.map((u) => u.userId);
 
       if (adminIds.length > 0) {
+        // กำหนดข้อความตามสถานะ
+        const title =
+          newStatus === 'resubmitted' ? 'แก้ไขใบลาแล้ว' : 'มีการแก้ไขใบลา';
+        const message =
+          newStatus === 'resubmitted'
+            ? `พนักงานแก้ไขใบลา "${leaveReason}" เรียบร้อยแล้ว (รอตรวจใหม่)`
+            : `คุณ ${requesterName} ได้แก้ไขข้อมูลการลา "${leaveReason}" (รอตรวจสอบ)`;
+
         await this.notiService.createNotification({
           userId: adminIds,
           menuKey: 'manageDataLeave',
-          title: '📝 มีการแก้ไขใบลา',
-          message: `คุณ ${requesterName} ได้แก้ไขข้อมูลการลา "${leaveReason}" (รอตรวจสอบ)`,
+          title: title,
+          message: message,
           type: 'info',
           meta: { documentId: leaveId },
         });
